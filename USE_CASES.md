@@ -1,0 +1,184 @@
+# Use Case Specification
+
+---
+
+## 1. Actor Catalog
+
+> Defines everyone (and everything) that interacts with the system, ensuring that Role-Based Access Control (RBAC) permissions are built correctly.
+
+| Actor ID | Actor | Type | Description |
+|----------|-------|------|-------------|
+| ACT-01 | Registrar | Human | Manages student enrollment and consent forms |
+| ACT-02 | Student | Human | Subject of biometric recognition at check-in zones |
+| ACT-03 | Parent / Guardian | Human | Grants or revokes biometric consent |
+| ACT-04 | System Admin | Human | Manages hardware, cameras, and server health |
+| ACT-05 | Security Officer | Human | Receives and responds to real-time security alerts |
+| ACT-06 | SIS | External System | Student Information System (e.g., PowerSchool, Infinite Campus) |
+
+---
+
+## 2. Use Case Index
+
+> Categorizes use cases so the development team can prioritize the core engine vs. administrative tooling.
+
+| ID | Use Case | Category | Priority |
+|----|----------|----------|----------|
+| UC-01 | Enroll Student Biometrics | Core | High |
+| UC-02 | Process Opt-Out / Data Deletion | Legal / Compliance | High |
+| UC-03 | Automated Attendance Marking | Core | High |
+| UC-04 | Unauthorized Visitor Alert | Security | High |
+| UC-05 | Audit & Report Generation | Administrative | Medium |
+| UC-06 | Device / Camera Onboarding & Health Check | Operational | Medium |
+
+---
+
+## 3. Detailed Use Case Specifications
+
+---
+
+### UC-01: Enroll Student Biometrics
+
+| Field | Detail |
+|-------|--------|
+| **Primary Actor** | Registrar |
+| **Secondary Actor** | Student |
+| **Trigger** | A new student arrives for onboarding |
+
+**Main Flow:**
+1. Registrar selects a student record from the SIS-synced list.
+2. System verifies that a signed Consent Form is flagged in the database.
+3. Registrar activates the enrollment camera.
+4. System guides the student to turn left, right, and center.
+5. System generates a Vector Embedding and discards the raw images.
+
+**Alternate Flow:**
+- **Low Quality:** If lighting is poor, the system prompts the Registrar to adjust the environment and retry.
+
+**Success Outcome:** Student profile status changes to `"Active - Biometric."`
+
+---
+
+### UC-02: Process Opt-Out / Data Deletion
+
+| Field | Detail |
+|-------|--------|
+| **Primary Actor** | Parent / Guardian |
+| **Secondary Actor** | Registrar |
+| **Trigger** | A parent withdraws consent for biometric processing |
+
+**Main Flow:**
+1. Registrar locates the student record.
+2. Registrar selects **"Revoke Consent & Purge Data."**
+3. System identifies the student's unique Vector ID.
+4. System issues a "Purge Command" to all Edge Nodes.
+5. All mathematical face-prints for that student are permanently deleted.
+
+**Success Outcome:** Student remains in the roster for manual attendance but has zero biometric footprint.
+
+---
+
+### UC-03: Automated Attendance Marking
+
+| Field | Detail |
+|-------|--------|
+| **Primary Actor** | Student |
+| **Secondary Actor** | SIS |
+| **Trigger** | Student walks through a designated "Check-in Zone" during school hours |
+
+**Main Flow:**
+1. Camera captures video; Edge Node detects a face.
+2. Edge Node calculates the vector and compares it to the local database.
+3. Match is found with a confidence score $> 92\%$.
+4. System logs the timestamp and location.
+5. System pushes a `"Present"` status update to the SIS API.
+
+**Alternate Flow:**
+- **Partial Match:** If confidence is $70\%$–$91\%$, the system logs a `"Verification Needed"` flag for the teacher to review.
+
+**Success Outcome:** Digital roll-call is updated without manual entry.
+
+---
+
+### UC-04: Unauthorized Visitor Alert
+
+| Field | Detail |
+|-------|--------|
+| **Primary Actor** | Security Officer |
+| **Trigger** | An individual on the Watchlist (e.g., restricted guardian) is detected |
+
+**Main Flow:**
+1. System identifies a match against the Watchlist entity.
+2. System triggers a silent alarm in the Security Dashboard.
+3. A push notification is sent to the Security Officer's mobile device.
+4. Notification includes the individual's name, risk level, and a map of the camera location.
+
+**Alternate Flow:**
+- **False Positive:** Security Officer reviews the alert and marks it as `"Dismissed,"` preventing further alarms for that specific event.
+
+**Success Outcome:** Security is notified of a threat in $< 3$ seconds.
+
+---
+
+### UC-05: Audit & Report Generation
+
+| Field | Detail |
+|-------|--------|
+| **Primary Actor** | Registrar (ACT-01) |
+| **Secondary Actors** | System Admin (ACT-04), SIS (ACT-06) |
+| **Trigger** | An administrative deadline is reached (e.g., end of day), or a staff member manually requests a summary |
+
+**Main Flow:**
+1. **Selection:** Registrar logs into the dashboard and selects the **"Report Center."**
+2. **Configuration:** Actor selects report type (e.g., `"Period 1 Attendance"`) and applies filters for Date, Grade, or Location.
+3. **Data Retrieval** *(includes UC-03):* System pulls raw identification logs from the `attendance_log` table generated by the Automated Attendance Check.
+4. **Validation:** System cross-references biometric "pings" against the master student roster to identify gaps (students expected but not detected).
+5. **Formatting:** System aggregates data into a visual summary and a downloadable file (PDF / CSV / XLSX).
+6. **Distribution:** Registrar downloads the report or triggers a **"Sync"** to push records to the SIS (ACT-06).
+
+**Alternate Flows:**
+- **Manual Override Sync:** If a teacher manually updated a student's status, the report highlights the entry to distinguish it from AI-verified data.
+- **No Data Alert:** If no logs exist for a specific camera zone, the system alerts the Admin to check device health.
+
+**Success Outcome:** An accurate, time-stamped report is produced reflecting the physical presence of students on campus, fulfilling both educational and safety compliance requirements.
+
+---
+
+### UC-06: Device / Camera Onboarding & Health Check
+
+| Field | Detail |
+|-------|--------|
+| **Primary Actor** | System Admin |
+| **Trigger** | Installation of a new camera or scheduled maintenance |
+
+**Main Flow:**
+1. Admin enters the camera's RTSP credentials.
+2. System runs a Diagnostic Check (Resolution, Frame Rate, Connectivity).
+3. Admin maps the camera to a physical location (e.g., `"Library Exit"`).
+4. System begins monitoring heartbeat signals from the device.
+
+**Success Outcome:** Camera is integrated into the live recognition pool.
+
+---
+
+## 4. Use Case Relationships
+
+```
+UC-01 (Enroll)
+   ├── <<included by>> UC-03 (Attendance) — attendance requires a valid biometric template
+   └── <<extended by>> UC-02 (Opt-Out)   — specialized flow for removal of enrollment data
+
+UC-03 (Attendance)
+   └── <<included by>> UC-05 (Reporting) — reports are generated from attendance flow data
+```
+
+| Relationship | Type | Description |
+|-------------|------|-------------|
+| UC-03 → UC-01 | `<<includes>>` | Attendance cannot function without a valid biometric template |
+| UC-02 → UC-01 | `<<extends>>` | A specialized flow for the removal of enrollment data |
+| UC-05 → UC-03 | `<<includes>>` | Reports are generated based on data collected during the attendance flow |
+
+---
+
+## Summary
+
+This use case document ensures the development team focuses not just on the **"Happy Path"** (Attendance), but also on **legal requirements** (Opt-Out) and **operational overhead** (Device Management).
