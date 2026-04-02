@@ -1,16 +1,16 @@
--- V004__create_classes_table.sql
+-- V004__create_classes_table.sql (SQLite)
 CREATE TABLE classes (
-    id              BIGSERIAL PRIMARY KEY,
-    tenant_id       UUID NOT NULL,
-    grade           VARCHAR(50) NOT NULL,
-    section         VARCHAR(20) NOT NULL,
-    class_name      VARCHAR(100),
-    subject         VARCHAR(100),
-    teacher_id      UUID REFERENCES admins(id),
-    is_active       BOOLEAN DEFAULT true,
-    academic_year   VARCHAR(20),
-    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id       TEXT NOT NULL,
+    grade           TEXT NOT NULL,
+    section         TEXT NOT NULL,
+    class_name      TEXT,
+    subject         TEXT,
+    teacher_id      TEXT REFERENCES admins(id),
+    is_active       INTEGER DEFAULT 1,                             -- 1=true, 0=false
+    academic_year   TEXT,
+    created_at      TEXT DEFAULT (datetime('now')),
+    updated_at      TEXT DEFAULT (datetime('now')),
 
     UNIQUE(tenant_id, grade, section, academic_year)
 );

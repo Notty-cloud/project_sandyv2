@@ -1,19 +1,17 @@
--- V005__create_enrollments_table.sql
+-- V005__create_enrollments_table.sql (SQLite)
 CREATE TABLE enrollments (
-    id                  BIGSERIAL PRIMARY KEY,
-    tenant_id           UUID NOT NULL,
-    student_id          UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-
-    enrollment_date     DATE NOT NULL DEFAULT CURRENT_DATE,
-    academic_year       VARCHAR(20) NOT NULL,
-    status              VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'enrolled', 'failed', 'expired')),
-    embedding_generated BOOLEAN DEFAULT FALSE,
-    quality_score       FLOAT,
-    enrolled_by         UUID REFERENCES admins(id),
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id           TEXT NOT NULL,
+    student_id          TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    enrollment_date     TEXT NOT NULL DEFAULT (date('now')),
+    academic_year       TEXT NOT NULL,
+    status              TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'enrolled', 'failed', 'expired')),
+    embedding_generated INTEGER DEFAULT 0,                         -- 1=true, 0=false
+    quality_score       REAL,
+    enrolled_by         TEXT REFERENCES admins(id),
     notes               TEXT,
-
-    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at          TEXT DEFAULT (datetime('now')),
+    updated_at          TEXT DEFAULT (datetime('now'))
 );
 
 CREATE INDEX idx_enrollments_student ON enrollments(student_id);
