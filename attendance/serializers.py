@@ -15,12 +15,9 @@ class AttendanceSerializer(serializers.ModelSerializer):
 class AttendanceOverrideSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentAttendance
-        fields = ['status', 'override_reason', 'overridden_by', 'is_manual_override']
+        fields = ['status', 'override_reason']
 
     def validate(self, data):
-        data['is_manual_override'] = True
         if not data.get('override_reason'):
             raise serializers.ValidationError({'override_reason': 'Reason is required for a manual override.'})
-        if not data.get('overridden_by'):
-            raise serializers.ValidationError({'overridden_by': 'Admin performing the override must be specified.'})
         return data

@@ -1,14 +1,31 @@
 from datetime import date as date_type
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
+from admins.permissions import RoleLevelPermission
 from .models import StudentAttendance
 from .serializers import AttendanceSerializer, AttendanceOverrideSerializer
 
 
+def attendance_queryset_for_request(request):
+    tenant_id = request.query_params.get('tenant_id') or request.data.get('tenant_id')
+    queryset = StudentAttendance.objects.select_related('student', 'class_ref', 'overridden_by').all()
+    if tenant_id:
+        queryset = queryset.filter(tenant_id=tenant_id)
+
+    if getattr(request.user, 'role', None) == 'teacher':
+        queryset = queryset.filter(class_ref__teacher=request.user)
+
+    return queryset
+
+
 class AttendanceViewSet(viewsets.ModelViewSet):
+    permission_classes = [RoleLevelPermission]
+    required_roles = ('teacher', 'admin')
+    minimum_authorization_level = 1
     serializer_class = AttendanceSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['tenant_id', 'student', 'class_ref', 'date', 'status', 'is_manual_override']
@@ -16,11 +33,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     ordering = ['-date']
 
     def get_queryset(self):
-        tenant_id = self.request.query_params.get('tenant_id')
-        qs = StudentAttendance.objects.select_related('student', 'class_ref', 'overridden_by').all()
-        if tenant_id:
-            qs = qs.filter(tenant_id=tenant_id)
-        return qs
+        return attendance_queryset_for_request(self.request)
 
     @action(detail=True, methods=['patch'], url_path='override')
     def override(self, request, pk=None):
@@ -31,7 +44,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         record = self.get_object()
         serializer = AttendanceOverrideSerializer(record, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer.save(overridden_by=request.user, is_manual_override=True)
         return Response(AttendanceSerializer(record).data, status=status.HTTP_200_OK)
 
     @action(
@@ -154,3 +167,35 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             'message': f'{student.name} marked {attendance_status}.',
             'already_marked': False,
         }, status=status.HTTP_201_CREATED)
+
+
+class AttendanceListView(APIView):
+    permission_classes = [RoleLevelPermission]
+    required_roles = ('teacher', 'admin')
+    minimum_authorization_level = 1
+
+    def get(self, request):
+        queryset = attendance_queryset_for_request(request).order_by('-date', '-created_at')
+        serializer = AttendanceSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AttendanceOverrideView(APIView):
+    permission_classes = [RoleLevelPermission]
+    required_roles = ('teacher', 'admin')
+    minimum_authorization_level = 2
+
+    def post(self, request):
+        attendance_id = request.data.get('attendance_id')
+        if not attendance_id:
+            return Response({'attendance_id': 'This field is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            record = attendance_queryset_for_request(request).get(id=attendance_id)
+        except StudentAttendance.DoesNotExist:
+            return Response({'detail': 'Attendance record not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AttendanceOverrideSerializer(record, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(overridden_by=request.user, is_manual_override=True)
+        return Response(AttendanceSerializer(record).data, status=status.HTTP_200_OK)
