@@ -1,12 +1,17 @@
 Facial Recognition registration program.txt
+node_modules/
+dist/
 venv/
 __pycache__/
 *.pyc
 *.pyo
 .env
+.env.local
 db.sqlite3
 *.log
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+*.swp
+*.swo

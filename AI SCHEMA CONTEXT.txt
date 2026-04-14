@@ -1,0 +1,114 @@
+AI CONTEXT
+
+# Full Database Schema Context for Presentation Layer Development
+
+
+
+**Project:** Facial Recognition School Attendance MVP  
+**Database:** SQLite compatible (with future PostgreSQL support)  
+**Date:** April 2026  
+**Status:** Data Layer finalized and stable
+
+
+
+This document contains the complete current database schema. Please use this as context when building the React + Vite + Tailwind + Axios frontend (Presentation Layer).
+
+
+
+## 1. admins Table (Users / Teachers / School Staff)
+
+
+
+```sql
+CREATE TABLE admins (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id           UUID NOT NULL,
+    admin_name          VARCHAR(255) NOT NULL,
+    email               VARCHAR(255) UNIQUE NOT NULL,
+    password_hash       VARCHAR(255) NOT NULL,
+    role                VARCHAR(50) NOT NULL CHECK (role IN ('teacher', 'admin', 'principal')),
+    authorization_level INTEGER DEFAULT 1,
+    is_active           BOOLEAN DEFAULT true,
+    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+
+
+CREATE TABLE students (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       UUID NOT NULL,
+    student_id      VARCHAR(50) UNIQUE NOT NULL,
+    name            VARCHAR(255) NOT NULL,
+    grade           VARCHAR(50) NOT NULL,
+    section         VARCHAR(20) NOT NULL,
+    is_active       BOOLEAN DEFAULT true,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE student_embeddings (
+    id                  BIGSERIAL PRIMARY KEY,
+    student_id          UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    tenant_id           UUID NOT NULL,
+    
+    embedding           VECTOR(512) NOT NULL,           -- ArcFace 512-d embedding
+    version             INTEGER NOT NULL DEFAULT 1,
+    quality_score       FLOAT,
+    enrolled_at         TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    enrolled_by         UUID REFERENCES admins(id),
+    is_active           BOOLEAN DEFAULT true,
+    
+    UNIQUE(student_id, version)
+);
+
+
+
+CREATE TABLE classes (
+    id              BIGSERIAL PRIMARY KEY,
+    tenant_id       UUID NOT NULL,
+    grade           VARCHAR(50) NOT NULL,
+    section         VARCHAR(20) NOT NULL,
+    class_name      VARCHAR(100),
+    subject         VARCHAR(100),
+    teacher_id      UUID REFERENCES admins(id),
+    is_active       BOOLEAN DEFAULT true,
+    academic_year   VARCHAR(20),
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(tenant_id, grade, section, academic_year)
+);
+
+CREATE TABLE enrollments (
+    id                  BIGSERIAL PRIMARY KEY,
+    tenant_id           UUID NOT NULL,
+    student_id          UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    
+    enrollment_date     DATE NOT NULL DEFAULT CURRENT_DATE,
+    academic_year       VARCHAR(20) NOT NULL,
+    status              VARCHAR(50) DEFAULT 'pending',   -- pending, processing, completed, failed, re_enroll
+    embedding_generated BOOLEAN DEFAULT FALSE,
+    quality_score       FLOAT,
+    enrolled_by         UUID REFERENCES admins(id),
+    notes               TEXT,
+    
+    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE student_attendance (
+    id                  BIGSERIAL PRIMARY KEY,
+    tenant_id           UUID NOT NULL,
+    student_id          UUID NOT NULL REFERENCES students(id),
+    class_id            BIGINT REFERENCES classes(id),
+    date                DATE NOT NULL,
+    checkin_time        TIMESTAMP WITH TIME ZONE,
+    status              VARCHAR(20) NOT NULL,           -- present, absent, late
+    confidence          FLOAT,
+    is_manual_override  BOOLEAN DEFAULT FALSE,
+    override_reason     TEXT,
+    overridden_by       UUID REFERENCES admins(id),
+    location            VARCHAR(100),
+    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
