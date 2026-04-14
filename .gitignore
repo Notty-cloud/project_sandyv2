@@ -1,1 +1,11 @@
 Facial Recognition registration program.txt
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
