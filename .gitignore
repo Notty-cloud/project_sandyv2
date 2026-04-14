@@ -30,3 +30,6 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# ML model files (too large for GitHub)
+ai_engine/models/*.onnx
