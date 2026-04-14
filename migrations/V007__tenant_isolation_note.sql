@@ -1,0 +1,23 @@
+-- V007__tenant_isolation_note.sql (SQLite)
+-- SQLite has no Row Level Security (RLS).
+-- Tenant isolation MUST be enforced at the application layer.
+--
+-- Every query that touches tenant data must include:
+--   WHERE tenant_id = ?   (with the tenant ID as a bound parameter)
+--
+-- Example (Node better-sqlite3):
+--   const students = db.prepare(
+--     'SELECT * FROM students WHERE tenant_id = ? AND is_active = 1'
+--   ).all(tenantId);
+--
+-- Example (Python sqlite3):
+--   cursor.execute(
+--     'SELECT * FROM students WHERE tenant_id = ? AND is_active = 1',
+--     (tenant_id,)
+--   )
+--
+-- When migrating to PostgreSQL (production), this is replaced by
+-- V007__enable_rls_tenant_isolation.sql which enforces isolation at
+-- the database level automatically.
+
+SELECT 1; -- no-op placeholder so migration runners do not error on empty file
