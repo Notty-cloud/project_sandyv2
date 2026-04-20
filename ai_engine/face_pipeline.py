@@ -5,12 +5,12 @@ Face embedding pipeline — fully self-contained, no C compilation required.
 
 Uses ONNX Runtime to run:
   1. SCRFD-10GF  (det_10g.onnx)      — Face detection + 5-point landmarks
-  2. ArcFace R100 (w600k_r100.onnx)  — 512-dimensional face embedding
+  2. ArcFace R50 (w600k_r50.onnx)  — 512-dimensional face embedding
 
 Both models come from InsightFace's buffalo_l pack.
 Model files must be placed at:
   ai_engine/models/det_10g.onnx        (~16 MB)
-  ai_engine/models/w600k_r100.onnx     (~250 MB)
+  ai_engine/models/w600k_r50.onnx     (~250 MB)
 
 See ai_engine/models/.gitkeep for download instructions.
 
@@ -29,7 +29,7 @@ Step 3 — Pixel Normalization
     Transpose and batch: (H, W, C) → (1, C, H, W) float32.
 
 Step 4 — ONNX Inference
-    ResNet100 ArcFace produces a raw 512-dimensional embedding vector.
+    ResNet50 ArcFace produces a raw 512-dimensional embedding vector.
 
 Step 5 — L2 Normalization
     Unit-normalize so cosine similarity equals the dot product.
@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 MODELS_DIR = Path(__file__).parent / 'models'
 DETECTOR_MODEL_PATH  = MODELS_DIR / 'det_10g.onnx'
-RECOGNIZER_MODEL_PATH = MODELS_DIR / 'w600k_r100.onnx'
+RECOGNIZER_MODEL_PATH = MODELS_DIR / 'w600k_r50.onnx'
 
 # ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -110,7 +110,7 @@ def _get_detector():
 
 
 def _get_recognizer():
-    """Thread-safe lazy loader for the ArcFace R100 ONNX session."""
+    """Thread-safe lazy loader for the ArcFace R50 ONNX session."""
     global _recognizer_session
     if _recognizer_session is None:
         with _recognizer_lock:
@@ -118,7 +118,7 @@ def _get_recognizer():
                 if not RECOGNIZER_MODEL_PATH.exists():
                     raise FileNotFoundError(
                         f'ArcFace model not found at: {RECOGNIZER_MODEL_PATH}\n'
-                        'Download w600k_r100.onnx from the InsightFace model zoo.\n'
+                        'Download w600k_r50.onnx from the InsightFace model zoo.\n'
                         'See ai_engine/models/.gitkeep for instructions.'
                     )
                 import onnxruntime as ort
@@ -508,7 +508,7 @@ logger = logging.getLogger(__name__)
 # ─── CONFIGURATION ────────────────────────────────────────────────────────────
 
 # Path to the ArcFace ONNX model (not committed — must be placed manually).
-ONNX_MODEL_PATH = Path(__file__).parent / 'models' / 'w600k_r100.onnx'
+ONNX_MODEL_PATH = Path(__file__).parent / 'models' / 'w600k_r50.onnx'
 
 # Aligned face size expected by ArcFace (do not change).
 ALIGNED_SIZE = 112
@@ -554,7 +554,7 @@ def _get_recognizer():
     """
     Thread-safe lazy loader for the ArcFace ONNX recognition model.
 
-    Expects w600k_r100.onnx at ai_engine/models/w600k_r100.onnx.
+    Expects w600k_r50.onnx at ai_engine/models/w600k_r50.onnx.
     Download from:
         https://github.com/deepinsight/insightface/tree/master/model_zoo
     """
@@ -565,8 +565,8 @@ def _get_recognizer():
                 if not ONNX_MODEL_PATH.exists():
                     raise FileNotFoundError(
                         f'ArcFace ONNX model not found at: {ONNX_MODEL_PATH}\n'
-                        'Download w600k_r100.onnx from the InsightFace model zoo '
-                        'and place it at ai_engine/models/w600k_r100.onnx'
+                        'Download w600k_r50.onnx from the InsightFace model zoo '
+                        'and place it at ai_engine/models/w600k_r50.onnx'
                     )
                 import onnxruntime as ort
 
@@ -730,7 +730,7 @@ def extract_embedding(image_input):
         FaceNotDetectedError: no face found in the image
         LowQualityFaceError:  detection confidence below QUALITY_THRESHOLD (0.6)
         MultipleFacesWarning: more than one face detected (largest used, execution continues)
-        FileNotFoundError:    w600k_r100.onnx model file is missing
+        FileNotFoundError:    w600k_r50.onnx model file is missing
     """
     # ── Steps 1–2: Detection + Alignment ──────────────────────────────────────
     aligned_bgr, quality_score = detect_and_align(image_input)
