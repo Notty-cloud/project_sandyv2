@@ -1,0 +1,19 @@
+# Place the following ONNX model files here.
+# These files are NOT committed to version control.
+#
+# 1. det_10g.onnx   (~16 MB)  — SCRFD-10GF face detector (buffalo_l)
+# 2. w600k_r100.onnx (~250 MB) — ResNet100 ArcFace recognizer
+#
+# Download the buffalo_l model pack with:
+#
+#   pip install insightface
+#   python -c "
+#   from insightface.app import FaceAnalysis
+#   app = FaceAnalysis(name='buffalo_l')
+#   app.prepare(ctx_id=-1)
+#   "
+#   # Models are cached at: ~/.insightface/models/buffalo_l/
+#   # Copy det_10g.onnx and w600k_r100.onnx to this directory.
+#
+# Or download directly from:
+#   https://github.com/deepinsight/insightface/releases  (buffalo_l pack zip)

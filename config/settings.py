@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'classes',
     'enrollments',
     'attendance',
+    'ai_engine',
 ]
 
 MIDDLEWARE = [
