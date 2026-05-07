@@ -1,336 +1,202 @@
-# Facial Recognition Attendance System - Presentation Layer
+# Facial Recognition Attendance System
 
-This is the React + Vite + Tailwind CSS presentation layer for a facial recognition-based school attendance system. The application provides 5 main dashboards for managing student attendance.
+A full-stack school attendance system that uses facial recognition to automate student check-ins. Teachers mark attendance by submitting a photo; the AI engine matches it against enrolled embeddings and records the result.
 
-## 📋 Features
+---
 
-### 1. **Sign-in Portal** (`/signin`)
-- Teacher/Admin authentication
-- Email and password-based login
-- Secure session management
-- Role-based access control
+## Tech Stack
 
-### 2. **Central Navigation Dashboard** (`/`)
-- Quick overview of system statistics
-- Navigation to all major features
-- Active classes listing
-- System status overview
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, Vite 5, Tailwind CSS 3.4, Axios, React Router 6 |
+| Backend | Django 6, Django REST Framework 3.17 |
+| AI / Face | DeepFace (Facenet512), ONNX Runtime (SCRFD + ArcFace R50) |
+| Database | SQLite (development) → PostgreSQL (production) |
+| Auth | JWT (PyJWT), bcrypt |
 
-### 3. **Class Attendance View** (`/attendance`)
-- View attendance records by class and date
-- Real-time attendance status (Present, Absent, Late)
-- Confidence scores from AI recognition
-- Manual override indicators
-- Filter and search capabilities
+---
 
-### 4. **Enrollment Hub** (`/enrollment`)
-- Student facial embedding registration
-- Image upload and processing
-- Enrollment status tracking (Pending, Processing, Completed, Failed)
-- Quality score monitoring
-- Re-enrollment for failed captures
+## Quick Start
 
-### 5. **Manual Override Interface** (`/override`)
-- Handle failed AI recognition cases
-- Manual attendance adjustment with audit trail
-- Low confidence flag handling
-- Override reason documentation
-- Comprehensive filtering and statistics
-
-## 🛠️ Tech Stack
-
-- **Framework:** React 18.2
-- **Build Tool:** Vite 5.0
-- **Styling:** Tailwind CSS 3.4
-- **HTTP Client:** Axios 1.6
-- **Routing:** React Router 6.20
-- **Node:** 16+ (Recommended: 18+)
-
-## 📦 Installation
-
-### 1. Install Dependencies
+### 1. Create the virtual environment and install Python dependencies
 ```bash
-npm install
+python -m venv venv
+source venv/Scripts/activate   # Windows
+# source venv/bin/activate     # Mac / Linux
+pip install -r requirements.txt
 ```
 
-### 2. Environment Setup
-Copy the example environment file and configure for your backend:
+### 2. Configure environment
 ```bash
 cp .env.example .env
 ```
+Edit `.env` — at minimum set `SECRET_KEY` and `JWT_SECRET_KEY` for production. Defaults work for local development.
 
-Edit `.env` with your API endpoint:
-```
-VITE_API_BASE_URL=http://localhost:3000/api
-```
-
-### 3. Create `.env.local` for Development
+### 3. Run database migrations
 ```bash
-# .env.local
-VITE_API_BASE_URL=http://localhost:3000/api
+python manage.py migrate
 ```
 
-## 🚀 Running the Application
-
-### Development Mode
+### 4. Create the first Level-3 Admin account
 ```bash
+python create_admin.py
+```
+Follow the prompts. This account can log in and manage all other accounts via the Admin Management page.
+
+### 5. Install frontend dependencies and start both servers
+```bash
+# Terminal 1 — Django API (port 3000)
+python manage.py runserver 3000
+
+# Terminal 2 — Vite frontend (port 5173)
+npm install
 npm run dev
 ```
-The app will be available at `http://localhost:5173`
 
-### Production Build
-```bash
-npm run build
+Open **http://localhost:5173** — you will land on the login page.
+
+---
+
+## Authentication
+
+Login uses a **username** (`admin_name`) and password — not an email address.
+
+Accounts have two access-control fields:
+
+| Field | Values | Meaning |
+|---|---|---|
+| `role` | `teacher`, `admin` | Category of user |
+| `authorization_level` | `1`, `2`, `3` | Power within that role |
+
+Permission tiers used across the system:
+
+| Level | Access |
+|---|---|
+| 1 (any role) | View students, classes, attendance; mark attendance by face |
+| 2+ | Override attendance records |
+| 3 (admin only) | Create / edit / delete accounts, unlock locked accounts |
+
+### Admin Management page
+Only visible in the sidebar when logged in as a **role=admin, level 3** account. From there you can:
+- Create new teacher or admin accounts
+- Change a user's role and authorization level
+- Activate / deactivate accounts
+- Unlock accounts locked after too many failed login attempts
+
+---
+
+## Pages
+
+| Route | Description | Access |
+|---|---|---|
+| `/signin` | Login page | Public |
+| `/dashboard` | Overview and navigation hub | Any authenticated user |
+| `/attendance` | View and mark class attendance | Any authenticated user |
+| `/enrollment` | Enroll students with face photos | Any authenticated user |
+| `/override` | Manually adjust failed AI records | Any authenticated user |
+| `/admin-management` | Manage user accounts | Level-3 admin only |
+
+---
+
+## Environment Variables
+
+All variables are in `.env.example`. Key ones:
+
+```
+# Backend
+SECRET_KEY                  Django secret key (required in production)
+JWT_SECRET_KEY              JWT signing key (required in production)
+DEBUG                       True (dev) / False (prod)
+ALLOWED_HOSTS               Comma-separated hostnames
+FRONTEND_ORIGIN             CORS allowed origin (default: http://localhost:5173)
+
+# Auth behaviour
+ACCESS_TOKEN_LIFETIME_HOURS Token TTL in hours (default: 8)
+LOGIN_LOCKOUT_THRESHOLD     Failed attempts before lockout (default: 5)
+
+# Face recognition
+FACE_MATCHING_THRESHOLD     Cosine similarity threshold (default: 0.65)
+FACE_QUALITY_THRESHOLD      Minimum detection confidence (default: 0.6)
+
+# Attendance
+ATTENDANCE_CUTOFF_HOUR      Late cutoff hour, 24h (default: 7)
+ATTENDANCE_CUTOFF_MINUTE    Late cutoff minute (default: 10)
+
+# Frontend
+VITE_API_BASE_URL           Backend API base URL (default: http://localhost:3000/api)
 ```
 
-### Preview Production Build
-```bash
-npm run preview
-```
+---
 
-## 📁 Project Structure
+## API Endpoints
 
-```
-src/
-├── components/
-│   ├── Header.jsx          # Main header with logout
-│   ├── Navigation.jsx      # Sidebar navigation
-│   ├── Alert.jsx           # Alert component
-│   └── ProtectedRoute.jsx  # Route protection
-├── pages/
-│   ├── SignIn.jsx          # Login dashboard
-│   ├── Dashboard.jsx       # Central navigation
-│   ├── AttendanceView.jsx  # Attendance records
-│   ├── EnrollmentHub.jsx   # Student enrollment
-│   └── ManualOverride.jsx  # Override failed records
-├── services/
-│   ├── api.js              # Axios API client & endpoints
-│   ├── auth.js             # Authentication utilities
-├── App.jsx                 # Main app with routing
-├── main.jsx                # React entry point
-└── index.css               # Global styles
-
-public/
-└── vite.svg
-
-Configuration Files:
-├── package.json            # Dependencies
-├── vite.config.js          # Vite configuration
-├── tailwind.config.js      # Tailwind configuration
-├── postcss.config.js       # PostCSS configuration
-└── index.html              # HTML entry point
-```
-
-## 🔑 Key Components
-
-### API Service Layer (`src/services/api.js`)
-Comprehensive API client with endpoints for:
-- **/auth** - Login/Logout
-- **/admins** - Admin profile management
-- **/students** - Student data
-- **/enrollments** - Enrollment management
-- **/attendance** - Attendance tracking
-- **/classes** - Class management
-
-### Authentication Service (`src/services/auth.js`)
-- Token storage and retrieval
-- User session management
-- Login/Logout handling
-
-### Navigation System
-- Protected routes that redirect unauthenticated users to `/signin`
-- Dynamic navigation based on current page
-- Logout functionality
-
-## 🔐 Authentication Flow
-
-1. User navigates to `/signin`
-2. Enters email and password
-3. System calls `/api/auth/login`
-4. Token and user data stored in localStorage
-5. User redirected to dashboard (`/`)
-6. Routes check authentication before rendering
-7. Logout clears session and redirects to signin
-
-## 📊 Database Schema Integration
-
-The application integrates with the following tables:
-
-### `students`
-- Student ID, Name, Grade, Section
-- Active status
-
-### `student_embeddings`
-- 512-d ArcFace facial embeddings
-- Quality scores, Version tracking
-
-### `classes`
-- Class name, Grade, Section
-- Teacher assignment
-
-### `enrollments`
-- Student enrollment records
-- Status: pending, processing, completed, failed, re_enroll
-- Quality scores and embedding status
-
-### `student_attendance`
-- Attendance records with timestamp
-- Confidence scores from AI
-- Manual override flags and reasons
-- Location tracking
-
-### `admins`
-- User accounts (Teachers/Admins)
-- Role-based access control
-- Password authentication
-
-## 🎨 UI/UX Features
-
-- **Responsive Design:** Works on desktop, tablet, and mobile
-- **Tailwind CSS:** Utility-first styling with custom theme
-- **Real-time Updates:** Live attendance and enrollment status
-- **Visual Indicators:** Status badges, progress bars, alerts
-- **Modal Dialogs:** For confirmations and detailed actions
-- **Data Tables:** Sortable, filterable records
-- **Error Handling:** User-friendly error messages
-- **Loading States:** Visual feedback during async operations
-
-## 📝 Usage Examples
-
-### View Today's Attendance
-1. Navigate to **Attendance** section
-2. Select a class from dropdown
-3. Choose today's date
-4. View all student attendance records
-
-### Enroll a New Student
-1. Go to **Enrollment Hub**
-2. Select the class and student
-3. Click "Upload Image"
-4. Select a clear frontal face photo
-5. System processes facial embedding
-
-### Override Failed Recognition
-1. Go to **Manual Override**
-2. Select class and date
-3. Review records with low confidence
-4. Click "Override" button
-5. Select new status and provide reason
-6. Confirm override (audit trail recorded)
-
-## 🔗 API Integration
-
-The application expects a backend API at `http://localhost:3000/api` with the following endpoints:
+All endpoints are available under both `/api/` and `/api/v1/`.
 
 ### Authentication
 ```
-POST   /auth/login
-POST   /auth/logout
+POST  /api/auth/login/            { admin_name, password }
+POST  /api/auth/logout/
+POST  /api/auth/change-password/  { current_password, new_password }
 ```
 
-### Admin
+### Account Management (level-3 admin only)
 ```
-GET    /admins/profile
-PUT    /admins/profile
+GET    /api/admins/
+POST   /api/admins/               { admin_name, email, password, role, authorization_level, tenant_id }
+PATCH  /api/admins/{id}/          { role, authorization_level, is_active }
+DELETE /api/admins/{id}/
+POST   /api/admin/{id}/unlock/
 ```
 
 ### Students
 ```
-GET    /students?classId={id}
-GET    /students/{id}
-POST   /students
-PUT    /students/{id}
-```
-
-### Enrollment
-```
-GET    /enrollments
-GET    /enrollments/{id}
-POST   /enrollments
-PATCH  /enrollments/{id}/status
-POST   /enrollments/{id}/upload
+GET    /api/students/
+POST   /api/students/
+GET    /api/students/{id}/
+PUT    /api/students/{id}/
+POST   /api/students/{id}/enroll/    multipart: image, academic_year, enrolled_by
+POST   /api/students/identify/       multipart: image, tenant_id, threshold
 ```
 
 ### Attendance
 ```
-GET    /attendance/today?classId={id}
-GET    /attendance/history?studentId={id}&startDate={date}&endDate={date}
-GET    /attendance/class?classId={id}&date={date}
-POST   /attendance
-PATCH  /attendance/{id}/override
+GET    /api/attendance/
+POST   /api/attendance/mark-by-face/ multipart: image, tenant_id, class_id, date, threshold
+PATCH  /api/attendance/{id}/override/
+POST   /api/attendance/override/
 ```
 
 ### Classes
 ```
-GET    /classes
-GET    /classes/{id}
-GET    /classes/{id}/students
+GET  /api/classes/
+GET  /api/classes/{id}/
 ```
 
-## 🌐 Environment Variables
-
+### Enrollments
 ```
-VITE_API_BASE_URL    # Backend API base URL
-VITE_APP_NAME        # Application display name
+GET    /api/enrollments/
+GET    /api/enrollments/{id}/
+POST   /api/enrollment/
 ```
-
-## 🚨 Error Handling
-
-The application includes:
-- Network error handling with user-friendly messages
-- Form validation
-- Token expiration handling
-- API error responses display
-- Loading and error states
-
-## 📱 Browser Support
-
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-## 🔐 Security Features
-
-- JWT token-based authentication
-- Local storage for secure token management
-- HTTPS support
-- CORS configuration
-- Protected routes
-
-## 📈 Performance
-
-- Lazy loading for routes
-- Optimized re-renders with React
-- CSS minification with Tailwind
-- Code splitting with Vite
-
-## 🐛 Known Limitations
-
-- Requires backend API running separately
-- LocalStorage browser support required
-- HTTPS recommended for production
-
-## 📄 License
-
-All rights reserved © 2026 Cybernations Project
-
-## 👥 Support
-
-For issues or questions regarding the presentation layer:
-1. Check API connectivity
-2. Verify environment variables
-3. Review browser console for errors
-4. Check backend API logs
-
-## 🎯 Next Steps
-
-1. Set up backend API server
-2. Configure environment variables
-3. Run `npm install`
-4. Start development server with `npm run dev`
-5. Test all 5 dashboards with sample data
 
 ---
 
-**Happy Attendance Tracking! 📚👨‍🎓**
+## Maintenance
+
+### Prune expired token blacklist entries
+Run daily via cron or task scheduler:
+```bash
+python manage.py prune_token_blacklist
+```
+
+### Production checklist
+- Set `DEBUG=False` in `.env`
+- Set strong `SECRET_KEY` and `JWT_SECRET_KEY`
+- Set `ALLOWED_HOSTS` to your domain
+- Set `FRONTEND_ORIGIN` to your frontend URL
+- Switch `DATABASES` in `config/settings.py` to PostgreSQL
+- Place ONNX model files in `ai_engine/models/` (`det_10g.onnx`, `w600k_r50.onnx`)
+
+---
+
+© 2026 Cybernations Project

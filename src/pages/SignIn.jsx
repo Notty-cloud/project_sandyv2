@@ -6,7 +6,7 @@ import Alert from '../components/Alert'
 
 const SignIn = ({ onLogin }) => {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [adminName, setAdminName] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -19,15 +19,15 @@ const SignIn = ({ onLogin }) => {
     setLoading(true)
 
     try {
-      const response = await authAPI.login(email, password)
-      const { token, admin } = response.data
+      const response = await authAPI.login(adminName, password)
+      const { access_token, admin } = response.data
 
-      authService.login(token, admin)
+      authService.login(access_token, admin)
       setSuccess('Login successful! Redirecting...')
       
       setTimeout(() => {
         onLogin()
-        navigate('/')
+        navigate('/dashboard')
       }, 1000)
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid credentials. Please try again.')
@@ -54,16 +54,16 @@ const SignIn = ({ onLogin }) => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email */}
+          {/* Username */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email Address
+              Username
             </label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="teacher@school.com"
+              type="text"
+              value={adminName}
+              onChange={(e) => setAdminName(e.target.value)}
+              placeholder="e.g. jdelacruz"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               required
             />
@@ -98,8 +98,8 @@ const SignIn = ({ onLogin }) => {
         <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm font-semibold text-gray-900 mb-2">Demo Credentials:</p>
           <ul className="text-xs text-gray-700 space-y-1">
-            <li>• Teachers/Admin: Use your school email</li>
-            <li>• Contact admin for account access</li>
+            <li>• Enter your assigned username and password</li>
+            <li>• Contact a level-3 admin for account access</li>
           </ul>
         </div>
 

@@ -34,9 +34,10 @@ const ManualOverride = () => {
   const fetchClasses = async () => {
     try {
       const response = await classAPI.getClasses()
-      setClasses(response.data)
-      if (response.data.length > 0) {
-        setSelectedClass(response.data[0].id)
+      const data = response.data?.results ?? response.data
+      setClasses(data)
+      if (data.length > 0) {
+        setSelectedClass(data[0].id)
       }
     } catch (err) {
       setError('Failed to load classes')
@@ -48,7 +49,7 @@ const ManualOverride = () => {
       setLoading(true)
       const response = await attendanceAPI.getClassAttendance(selectedClass, selectedDate)
       // Filter for records that need manual review (low confidence or manual override)
-      const failed = response.data.filter(
+      const failed = (response.data?.results ?? response.data).filter(
         r => r.confidence === null || r.confidence < 0.7 || r.is_manual_override
       )
       setFailedRecords(failed)
@@ -238,7 +239,7 @@ const ManualOverride = () => {
                             </td>
                             <td className="px-6 py-3">
                               <span className={`px-2 py-1 rounded text-xs font-semibold ${confidenceBadge.color} ${confidenceBadge.text}`}>
-                                {record.confidence !== null 
+                                {record.confidence != null
                                   ? `${(record.confidence * 100).toFixed(1)}% - ${confidenceBadge.label}`
                                   : confidenceBadge.label
                                 }

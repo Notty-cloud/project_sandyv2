@@ -6,7 +6,12 @@ import Dashboard from './pages/Dashboard'
 import AttendanceView from './pages/AttendanceView'
 import EnrollmentHub from './pages/EnrollmentHub'
 import ManualOverride from './pages/ManualOverride'
-import ProtectedRoute from './components/ProtectedRoute'
+import AdminManagement from './pages/AdminManagement'
+
+const isLevel3Admin = () => {
+  const user = authService.getUserData()
+  return user?.role === 'admin' && user?.authorization_level >= 3
+}
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated())
@@ -23,27 +28,37 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route 
-          path="/signin" 
-          element={<SignIn onLogin={() => setIsAuthenticated(true)} />} 
+        <Route
+          path="/"
+          element={<Navigate to="/signin" replace />}
         />
-        <Route 
-          path="/" 
-          element={isAuthenticated ? <Dashboard /> : <Navigate to="/signin" />} 
+        <Route
+          path="/signin"
+          element={<SignIn onLogin={() => setIsAuthenticated(true)} />}
         />
-        <Route 
-          path="/attendance" 
-          element={isAuthenticated ? <AttendanceView /> : <Navigate to="/signin" />} 
+        <Route
+          path="/dashboard"
+          element={isAuthenticated ? <Dashboard /> : <Navigate to="/signin" />}
         />
-        <Route 
-          path="/enrollment" 
-          element={isAuthenticated ? <EnrollmentHub /> : <Navigate to="/signin" />} 
+        <Route
+          path="/attendance"
+          element={isAuthenticated ? <AttendanceView /> : <Navigate to="/signin" />}
         />
-        <Route 
-          path="/override" 
-          element={isAuthenticated ? <ManualOverride /> : <Navigate to="/signin" />} 
+        <Route
+          path="/enrollment"
+          element={isAuthenticated ? <EnrollmentHub /> : <Navigate to="/signin" />}
         />
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route
+          path="/override"
+          element={isAuthenticated ? <ManualOverride /> : <Navigate to="/signin" />}
+        />
+        <Route
+          path="/admin-management"
+          element={isAuthenticated
+            ? (isLevel3Admin() ? <AdminManagement /> : <Navigate to="/dashboard" />)
+            : <Navigate to="/signin" />}
+        />
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/signin"} replace />} />
       </Routes>
     </Router>
   )

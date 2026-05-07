@@ -29,9 +29,10 @@ const AttendanceView = () => {
   const fetchClasses = async () => {
     try {
       const response = await classAPI.getClasses()
-      setClasses(response.data)
-      if (response.data.length > 0) {
-        setSelectedClass(response.data[0].id)
+      const data = response.data?.results ?? response.data
+      setClasses(data)
+      if (data.length > 0) {
+        setSelectedClass(data[0].id)
       }
     } catch (err) {
       setError('Failed to load classes')
@@ -42,7 +43,7 @@ const AttendanceView = () => {
     try {
       setLoading(true)
       const response = await attendanceAPI.getClassAttendance(selectedClass, selectedDate)
-      setAttendance(response.data)
+      setAttendance(response.data?.results ?? response.data)
     } catch (err) {
       setError('Failed to load attendance records')
     } finally {

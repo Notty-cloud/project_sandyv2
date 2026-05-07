@@ -74,15 +74,29 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         tenant_id = request.data.get('tenant_id')
         class_id = request.data.get('class_id')
         image_file = request.FILES.get('image')
-        threshold = float(request.data.get('threshold', 0.65))
         location = request.data.get('location', '')
-        attendance_date = request.data.get('date') or date_type.today().isoformat()
+
+        try:
+            threshold = float(request.data.get('threshold', 0.65))
+            assert 0.0 < threshold <= 1.0
+        except (ValueError, AssertionError):
+            return Response({'threshold': 'Must be a number between 0.0 and 1.0.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from datetime import datetime as dt
+        raw_date = request.data.get('date')
+        try:
+            attendance_date = dt.strptime(raw_date, '%Y-%m-%d').date() if raw_date else date_type.today()
+        except ValueError:
+            return Response({'date': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # ── Validation ────────────────────────────────────────────────────
         errors = {}
         if not tenant_id: errors['tenant_id'] = 'Required.'
         if not class_id:  errors['class_id'] = 'Required.'
-        if not image_file: errors['image'] = 'Required.'
+        if not image_file:
+            errors['image'] = 'Required.'
+        elif image_file.size > 10 * 1024 * 1024:
+            errors['image'] = 'File too large. Maximum size is 10 MB.'
         if errors:
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -121,7 +135,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 'match': None,
                 'confidence': round(best_score, 4),
                 'message': f'No match above threshold ({threshold}). Confidence: {round(best_score * 100, 1)}%',
-            })
+            }, status=status.HTTP_404_NOT_FOUND)
 
         student = best_emb.student
 
@@ -132,9 +146,11 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         except Class.DoesNotExist:
             return Response({'error': 'Class not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Determine status: late if past 7:10 AM
+        # Determine status: late if past configured cutoff time
+        from django.conf import settings as django_settings
         now = timezone.localtime(timezone.now())
-        cutoff_hour, cutoff_minute = 7, 10
+        cutoff_hour = getattr(django_settings, 'ATTENDANCE_CUTOFF_HOUR', 7)
+        cutoff_minute = getattr(django_settings, 'ATTENDANCE_CUTOFF_MINUTE', 10)
         attendance_status = 'late' if (now.hour > cutoff_hour or
             (now.hour == cutoff_hour and now.minute >= cutoff_minute)) else 'present'
 

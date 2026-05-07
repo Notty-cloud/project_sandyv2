@@ -7,9 +7,14 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-dev-only'
+    else:
+        raise ValueError('SECRET_KEY environment variable must be set in production')
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -80,6 +85,11 @@ REST_FRAMEWORK = {
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', SECRET_KEY)
 ACCESS_TOKEN_LIFETIME = timedelta(hours=int(os.getenv('ACCESS_TOKEN_LIFETIME_HOURS', '8')))
 LOGIN_LOCKOUT_THRESHOLD = int(os.getenv('LOGIN_LOCKOUT_THRESHOLD', '5'))
+
+FACE_MATCHING_THRESHOLD = float(os.getenv('FACE_MATCHING_THRESHOLD', '0.65'))
+FACE_QUALITY_THRESHOLD = float(os.getenv('FACE_QUALITY_THRESHOLD', '0.6'))
+ATTENDANCE_CUTOFF_HOUR = int(os.getenv('ATTENDANCE_CUTOFF_HOUR', '7'))
+ATTENDANCE_CUTOFF_MINUTE = int(os.getenv('ATTENDANCE_CUTOFF_MINUTE', '10'))
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]

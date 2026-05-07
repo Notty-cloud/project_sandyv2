@@ -36,9 +36,10 @@ const EnrollmentHub = () => {
   const fetchClasses = async () => {
     try {
       const response = await classAPI.getClasses()
-      setClasses(response.data)
-      if (response.data.length > 0) {
-        setSelectedClass(response.data[0].id)
+      const data = response.data?.results ?? response.data
+      setClasses(data)
+      if (data.length > 0) {
+        setSelectedClass(data[0].id)
       }
     } catch (err) {
       setError('Failed to load classes')
@@ -48,7 +49,7 @@ const EnrollmentHub = () => {
   const fetchStudents = async () => {
     try {
       const response = await classAPI.getClassStudents(selectedClass)
-      setStudents(response.data)
+      setStudents(response.data?.results ?? response.data)
     } catch (err) {
       setError('Failed to load students')
     }
@@ -57,7 +58,7 @@ const EnrollmentHub = () => {
   const fetchEnrollments = async () => {
     try {
       const response = await enrollmentAPI.getEnrollments()
-      setEnrollments(response.data)
+      setEnrollments(response.data?.results ?? response.data)
     } catch (err) {
       setError('Failed to load enrollments')
     }

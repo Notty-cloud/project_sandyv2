@@ -6,6 +6,7 @@ import Alert from '../components/Alert'
 import { classAPI } from '../services/api'
 
 const Dashboard = () => {
+  const navigate = useNavigate()
   const [classes, setClasses] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -18,7 +19,7 @@ const Dashboard = () => {
     try {
       setLoading(true)
       const response = await classAPI.getClasses()
-      setClasses(response.data)
+      setClasses(response.data?.results ?? response.data)
     } catch (err) {
       setError('Failed to load classes. Please try again.')
       console.error(err)
@@ -29,7 +30,7 @@ const Dashboard = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Navigation currentPage="/" />
+      <Navigation currentPage="/dashboard" />
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header title="Central Navigation Dashboard" />
@@ -80,8 +81,8 @@ const Dashboard = () => {
                       </div>
                       <span className="text-3xl">→</span>
                     </div>
-                    <button 
-                      onClick={() => window.location.href = '/attendance'}
+                    <button
+                      onClick={() => navigate('/attendance')}
                       className="mt-4 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition font-semibold"
                     >
                       Go to Attendance
@@ -100,8 +101,8 @@ const Dashboard = () => {
                       </div>
                       <span className="text-3xl">→</span>
                     </div>
-                    <button 
-                      onClick={() => window.location.href = '/enrollment'}
+                    <button
+                      onClick={() => navigate('/enrollment')}
                       className="mt-4 w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition font-semibold"
                     >
                       Go to Enrollment
@@ -120,8 +121,8 @@ const Dashboard = () => {
                       </div>
                       <span className="text-3xl">→</span>
                     </div>
-                    <button 
-                      onClick={() => window.location.href = '/override'}
+                    <button
+                      onClick={() => navigate('/override')}
                       className="mt-4 w-full bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600 transition font-semibold"
                     >
                       Go to Override

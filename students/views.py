@@ -4,12 +4,16 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
+from admins.permissions import RoleLevelPermission
 from .models import Student, StudentEmbedding
 from .serializers import StudentSerializer, StudentDetailSerializer, StudentEmbeddingSerializer
 from .face import extract_embedding, cosine_similarity
 
 
 class StudentViewSet(viewsets.ModelViewSet):
+    permission_classes = [RoleLevelPermission]
+    required_roles = ('teacher', 'admin')
+    minimum_authorization_level = 1
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['tenant_id', 'grade', 'section', 'is_active']
     search_fields = ['name', 'student_id']
@@ -52,6 +56,8 @@ class StudentViewSet(viewsets.ModelViewSet):
         errors = {}
         if not image_file:
             errors['image'] = 'A face photo is required.'
+        elif image_file.size > 10 * 1024 * 1024:
+            errors['image'] = 'File too large. Maximum size is 10 MB.'
         if not academic_year:
             errors['academic_year'] = 'Academic year is required.'
         if not enrolled_by_id:
@@ -77,27 +83,30 @@ class StudentViewSet(viewsets.ModelViewSet):
         except Admin.DoesNotExist:
             return Response({'enrolled_by': 'Admin not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Enforce 5-photo limit
-        active_count = StudentEmbedding.objects.filter(student=student, is_active=True).count()
-        if active_count >= 5:
-            return Response(
-                {'image': 'Maximum of 5 enrollment photos reached. Remove an old one before adding more.'},
-                status=status.HTTP_400_BAD_REQUEST,
+        from django.db import transaction
+
+        # Enforce 5-photo limit and create embedding atomically to avoid duplicate versions
+        with transaction.atomic():
+            student_locked = Student.objects.select_for_update().get(pk=student.pk)
+            active_count = StudentEmbedding.objects.filter(student=student_locked, is_active=True).count()
+            if active_count >= 5:
+                return Response(
+                    {'image': 'Maximum of 5 enrollment photos reached. Remove an old one before adding more.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            last_version = StudentEmbedding.objects.filter(student=student_locked).order_by('-version').first()
+            next_version = (last_version.version + 1) if last_version else 1
+
+            embedding_record = StudentEmbedding.objects.create(
+                student=student_locked,
+                tenant_id=student_locked.tenant_id,
+                embedding=embedding,
+                version=next_version,
+                quality_score=quality_score,
+                enrolled_by=enrolled_by,
+                is_active=True,
             )
-
-        # Get next version number
-        last_version = StudentEmbedding.objects.filter(student=student).order_by('-version').first()
-        next_version = (last_version.version + 1) if last_version else 1
-
-        embedding_record = StudentEmbedding.objects.create(
-            student=student,
-            tenant_id=student.tenant_id,
-            embedding=embedding,
-            version=next_version,
-            quality_score=quality_score,
-            enrolled_by=enrolled_by,
-            is_active=True,
-        )
 
         # ── Update enrollment record ──────────────────────────────────────
         from enrollments.models import Enrollment
@@ -138,7 +147,12 @@ class StudentViewSet(viewsets.ModelViewSet):
         """
         tenant_id = request.data.get('tenant_id')
         image_file = request.FILES.get('image')
-        threshold = float(request.data.get('threshold', 0.65))
+
+        try:
+            threshold = float(request.data.get('threshold', 0.65))
+            assert 0.0 < threshold <= 1.0
+        except (ValueError, AssertionError):
+            return Response({'threshold': 'Must be a number between 0.0 and 1.0.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if not tenant_id:
             return Response({'error': 'tenant_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -161,7 +175,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         ).select_related('student')
 
         if not active_embeddings.exists():
-            return Response({'match': None, 'message': 'No enrolled students found for this tenant.'})
+            return Response({'match': None, 'message': 'No enrolled students found for this tenant.'}, status=status.HTTP_404_NOT_FOUND)
 
         best_score = -1
         best_embedding = None
@@ -177,12 +191,15 @@ class StudentViewSet(viewsets.ModelViewSet):
                 'match': StudentSerializer(best_embedding.student).data,
                 'confidence': round(best_score, 4),
                 'embedding_version': best_embedding.version,
-            })
+            }, status=status.HTTP_200_OK)
 
-        return Response({'match': None, 'confidence': round(best_score, 4), 'message': 'No match above threshold.'})
+        return Response({'match': None, 'confidence': round(best_score, 4), 'message': 'No match above threshold.'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class StudentEmbeddingViewSet(viewsets.ModelViewSet):
+    permission_classes = [RoleLevelPermission]
+    required_roles = ('teacher', 'admin')
+    minimum_authorization_level = 1
     serializer_class = StudentEmbeddingSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['tenant_id', 'student', 'is_active']

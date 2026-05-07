@@ -112,6 +112,10 @@ class AuthLoginView(APIView):
 
 
 class AuthLogoutView(APIView):
+    permission_classes = [RoleLevelPermission]
+    required_roles = ('teacher', 'admin')
+    minimum_authorization_level = 1
+
     def post(self, request):
         claims = request.auth or {}
         jti = claims.get('jti')
@@ -129,6 +133,10 @@ class AuthLogoutView(APIView):
 
 
 class ChangePasswordView(APIView):
+    permission_classes = [RoleLevelPermission]
+    required_roles = ('teacher', 'admin')
+    minimum_authorization_level = 1
+
     def post(self, request):
         serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)

@@ -6,6 +6,6 @@ router = DefaultRouter()
 router.register(r'attendance', AttendanceViewSet, basename='attendance')
 
 urlpatterns = [
-	path('attendance', AttendanceListView.as_view(), name='attendance-list'),
-	path('attendance/override', AttendanceOverrideView.as_view(), name='attendance-override'),
+	path('attendance/', AttendanceListView.as_view(), name='attendance-list'),
+	path('attendance/override/', AttendanceOverrideView.as_view(), name='attendance-override'),
 ] + router.urls

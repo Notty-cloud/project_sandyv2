@@ -1,14 +1,18 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { authService } from '../services/auth'
 
 const Navigation = ({ currentPage }) => {
   const navigate = useNavigate()
+  const user = authService.getUserData()
+  const isLevel3Admin = user?.role === 'admin' && user?.authorization_level >= 3
 
   const navItems = [
-    { path: '/', label: 'Dashboard', icon: '📊' },
+    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/attendance', label: 'Attendance', icon: '📋' },
     { path: '/enrollment', label: 'Enrollment', icon: '📷' },
     { path: '/override', label: 'Override', icon: '⚙️' },
+    ...(isLevel3Admin ? [{ path: '/admin-management', label: 'Admin Management', icon: '🔑' }] : []),
   ]
 
   return (

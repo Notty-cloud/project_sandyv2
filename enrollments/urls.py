@@ -6,5 +6,5 @@ router = DefaultRouter()
 router.register(r'enrollments', EnrollmentViewSet, basename='enrollment')
 
 urlpatterns = [
-	path('enrollment', EnrollmentCreateView.as_view(), name='enrollment-create'),
+	path('enrollment/', EnrollmentCreateView.as_view(), name='enrollment-create'),
 ] + router.urls

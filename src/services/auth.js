@@ -16,7 +16,13 @@ export const authService = {
 
   getUserData: () => {
     const data = localStorage.getItem(USER_DATA_KEY);
-    return data ? JSON.parse(data) : null;
+    if (!data) return null;
+    try {
+      return JSON.parse(data);
+    } catch {
+      localStorage.removeItem(USER_DATA_KEY);
+      return null;
+    }
   },
 
   isAuthenticated: () => localStorage.getItem(AUTH_TOKEN_KEY) !== null,
