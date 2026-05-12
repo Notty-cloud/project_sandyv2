@@ -51,6 +51,9 @@ export const studentAPI = {
   getStudent: (id) => axiosInstance.get(`/students/${id}/`),
   createStudent: (data) => axiosInstance.post('/students/', data),
   updateStudent: (id, data) => axiosInstance.put(`/students/${id}/`, data),
+  identifyStudent: (formData) => axiosInstance.post('/students/identify/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
 
 // Enrollment APIs
@@ -68,6 +71,7 @@ export const enrollmentAPI = {
 // Attendance APIs
 export const attendanceAPI = {
   getAttendance: (params) => axiosInstance.get('/attendance/', { params }),
+  getClassAttendance: (classId, date) => axiosInstance.get('/attendance/', { params: { class_ref: classId, date } }),
   markAttendanceByFace: (formData) => axiosInstance.post('/attendance/mark-by-face/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
@@ -85,7 +89,10 @@ export const adminManagementAPI = {
 
 // Classes APIs
 export const classAPI = {
-  getClasses: () => axiosInstance.get('/classes/'),
+  getClasses: (params) => axiosInstance.get('/classes/', { params }),
   getClass: (id) => axiosInstance.get(`/classes/${id}/`),
   getClassStudents: (classId) => axiosInstance.get(`/classes/${classId}/`),
+  createClass: (data) => axiosInstance.post('/classes/', data),
+  updateClass: (id, data) => axiosInstance.patch(`/classes/${id}/`, data),
+  deleteClass: (id) => axiosInstance.delete(`/classes/${id}/`),
 };

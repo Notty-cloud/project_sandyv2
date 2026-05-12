@@ -7,13 +7,16 @@ const Navigation = ({ currentPage }) => {
   const user = authService.getUserData()
   const isLevel3Admin = user?.role === 'admin' && user?.authorization_level >= 3
 
+  const isLevel2Plus = user?.authorization_level >= 2
+
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
-    { path: '/attendance', label: 'Attendance', icon: '📋' },
-    { path: '/enrollment', label: 'Enrollment', icon: '📷' },
-    { path: '/override', label: 'Override', icon: '⚙️' },
-    ...(isLevel3Admin ? [{ path: '/admin-management', label: 'Admin Management', icon: '🔑' }] : []),
-  ]
+    { path: '/dashboard',        label: 'Dashboard',        icon: '📊' },
+    { path: '/attendance',       label: 'Attendance',       icon: '📋' },
+    { path: '/enrollment',       label: 'Enrollment',       icon: '📷' },
+    { path: '/classes',          label: 'Classes',          icon: '🏫', hidden: !isLevel2Plus },
+    { path: '/override',         label: 'Override',         icon: '⚙️' },
+    { path: '/admin-management', label: 'Admin Management', icon: '🔑', hidden: !isLevel3Admin },
+  ].filter((i) => !i.hidden)
 
   return (
     <nav className="bg-white shadow-sm border-r border-gray-200 min-h-screen w-64">

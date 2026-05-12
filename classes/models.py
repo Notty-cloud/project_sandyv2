@@ -16,7 +16,7 @@ class Class(models.Model):
 
     class Meta:
         db_table = 'classes'
-        unique_together = ('tenant_id', 'grade', 'section', 'academic_year')
+        unique_together = ('tenant_id', 'grade', 'section', 'subject', 'academic_year')
         indexes = [
             models.Index(fields=['tenant_id'], name='idx_classes_tenant'),
             models.Index(fields=['teacher'], name='idx_classes_teacher'),

@@ -5,8 +5,18 @@ import Alert from '../components/Alert'
 import { adminManagementAPI } from '../services/api'
 import { authService } from '../services/auth'
 
-const ROLE_OPTIONS = ['teacher', 'admin']
-const LEVEL_OPTIONS = [1, 2, 3]
+// Role profiles map a friendly label to the underlying role + level fields
+const ROLE_PROFILES = [
+  { label: 'Teacher',      description: 'Attendance marking and student viewing',          role: 'teacher', level: 1 },
+  { label: 'Coordinator',  description: 'Enrollment management and class coordination',    role: 'admin',   level: 2 },
+  { label: 'Head Teacher', description: 'Full system administration and account control',  role: 'admin',   level: 3 },
+]
+
+const profileOf = (admin) => {
+  if (admin.role === 'admin' && admin.authorization_level >= 3) return ROLE_PROFILES[2]
+  if (admin.role === 'admin' && admin.authorization_level >= 2) return ROLE_PROFILES[1]
+  return ROLE_PROFILES[0]
+}
 
 const EMPTY_FORM = {
   admin_name: '',
@@ -14,6 +24,7 @@ const EMPTY_FORM = {
   password: '',
   role: 'teacher',
   authorization_level: 1,
+  profile: 'Teacher',
 }
 
 const StatusBadge = ({ admin }) => {
@@ -64,10 +75,14 @@ const AdminManagement = () => {
     setCreateLoading(true)
     setError('')
     try {
+      const profile = ROLE_PROFILES.find((p) => p.label === createForm.profile) || ROLE_PROFILES[0]
       await adminManagementAPI.createAdmin({
-        ...createForm,
+        admin_name: createForm.admin_name,
+        email: createForm.email,
+        password: createForm.password,
         tenant_id: currentUser?.tenant_id,
-        authorization_level: Number(createForm.authorization_level),
+        role: profile.role,
+        authorization_level: profile.level,
       })
       setSuccess(`Account "${createForm.admin_name}" created successfully.`)
       setShowCreateModal(false)
@@ -172,8 +187,7 @@ const AdminManagement = () => {
                       <tr>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700">Username</th>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700">Email</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Role</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Level</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Role Profile</th>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700">Last Login</th>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
@@ -190,38 +204,29 @@ const AdminManagement = () => {
                           </td>
                           <td className="px-4 py-3 text-gray-600">{admin.email}</td>
 
-                          {/* Role — editable inline */}
+                          {/* Role Profile — editable inline */}
                           <td className="px-4 py-3">
                             {editingId === admin.id ? (
                               <select
-                                value={editForm.role}
-                                onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                                value={editForm.profile || profileOf(admin).label}
+                                onChange={(e) => {
+                                  const p = ROLE_PROFILES.find((r) => r.label === e.target.value)
+                                  setEditForm({ ...editForm, profile: e.target.value, role: p.role, authorization_level: p.level })
+                                }}
                                 className="border rounded px-2 py-1 text-sm"
                               >
-                                {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                                {ROLE_PROFILES.map((p) => <option key={p.label} value={p.label}>{p.label}</option>)}
                               </select>
-                            ) : (
-                              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                admin.role === 'admin'
-                                  ? 'bg-purple-100 text-purple-800'
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}>{admin.role}</span>
-                            )}
-                          </td>
-
-                          {/* Level — editable inline */}
-                          <td className="px-4 py-3">
-                            {editingId === admin.id ? (
-                              <select
-                                value={editForm.authorization_level}
-                                onChange={(e) => setEditForm({ ...editForm, authorization_level: e.target.value })}
-                                className="border rounded px-2 py-1 text-sm"
-                              >
-                                {LEVEL_OPTIONS.map(l => <option key={l} value={l}>Level {l}</option>)}
-                              </select>
-                            ) : (
-                              <span className="font-semibold text-gray-700">Level {admin.authorization_level}</span>
-                            )}
+                            ) : (() => {
+                              const p = profileOf(admin)
+                              const colors = { Teacher: 'bg-blue-100 text-blue-800', Coordinator: 'bg-purple-100 text-purple-800', 'Head Teacher': 'bg-red-100 text-red-800' }
+                              return (
+                                <div>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${colors[p.label]}`}>{p.label}</span>
+                                  <p className="text-xs text-gray-400 mt-0.5">{p.description}</p>
+                                </div>
+                              )
+                            })()}
                           </td>
 
                           {/* Active toggle — editable inline */}
@@ -348,27 +353,20 @@ const AdminManagement = () => {
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <select
-                    value={createForm.role}
-                    onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Authorization Level</label>
-                  <select
-                    value={createForm.authorization_level}
-                    onChange={(e) => setCreateForm({ ...createForm, authorization_level: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {LEVEL_OPTIONS.map(l => <option key={l} value={l}>Level {l}</option>)}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role Profile</label>
+                <select
+                  value={createForm.profile}
+                  onChange={(e) => setCreateForm({ ...createForm, profile: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {ROLE_PROFILES.map((p) => (
+                    <option key={p.label} value={p.label}>{p.label} — {p.description}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  {ROLE_PROFILES.find((p) => p.label === createForm.profile)?.description}
+                </p>
               </div>
               <div className="flex gap-3 pt-2">
                 <button

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Header from '../components/Header'
 import Navigation from '../components/Navigation'
 import Alert from '../components/Alert'
-import { attendanceAPI, classAPI, studentAPI } from '../services/api'
+import { attendanceAPI, classAPI } from '../services/api'
+import { authService } from '../services/auth'
 
 const AttendanceView = () => {
   const [selectedClass, setSelectedClass] = useState('')
@@ -13,6 +14,15 @@ const AttendanceView = () => {
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+
+  // Mark-by-face state
+  const [showFaceModal, setShowFaceModal] = useState(false)
+  const [faceImage, setFaceImage] = useState(null)
+  const [facePreview, setFacePreview] = useState(null)
+  const [faceThreshold, setFaceThreshold] = useState(0.65)
+  const [faceLoading, setFaceLoading] = useState(false)
+  const [faceResult, setFaceResult] = useState(null)
+  const fileInputRef = useRef(null)
 
   // Fetch classes on mount
   useEffect(() => {
@@ -60,7 +70,56 @@ const AttendanceView = () => {
     return statusMap[status] || { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Unknown' }
   }
 
-  const filteredAttendance = filterStatus === 'all' 
+  const handleFaceImageChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setFaceImage(file)
+    setFacePreview(URL.createObjectURL(file))
+    setFaceResult(null)
+  }
+
+  const handleMarkByFace = async () => {
+    if (!faceImage) { setError('Please select an image.'); return }
+    if (!selectedClass) { setError('Please select a class first.'); return }
+
+    const user = authService.getUserData()
+    const tenantId = user?.tenant_id
+    if (!tenantId) { setError('Session missing tenant ID. Please log in again.'); return }
+
+    const formData = new FormData()
+    formData.append('image', faceImage)
+    formData.append('tenant_id', tenantId)
+    formData.append('class_id', selectedClass)
+    formData.append('date', selectedDate)
+    formData.append('threshold', faceThreshold)
+
+    setFaceLoading(true)
+    setFaceResult(null)
+    try {
+      const response = await attendanceAPI.markAttendanceByFace(formData)
+      setFaceResult({ type: 'success', data: response.data })
+      fetchAttendance()
+    } catch (err) {
+      const data = err.response?.data
+      if (err.response?.status === 404) {
+        setFaceResult({ type: 'nomatch', data })
+      } else {
+        setFaceResult({ type: 'error', data })
+      }
+    } finally {
+      setFaceLoading(false)
+    }
+  }
+
+  const closeFaceModal = () => {
+    setShowFaceModal(false)
+    setFaceImage(null)
+    setFacePreview(null)
+    setFaceResult(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const filteredAttendance = filterStatus === 'all'
     ? attendance 
     : attendance.filter(a => a.status === filterStatus)
 
@@ -85,7 +144,17 @@ const AttendanceView = () => {
 
             {/* Filters */}
             <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Filters</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+                <button
+                  onClick={() => { setShowFaceModal(true); setFaceResult(null) }}
+                  disabled={!selectedClass}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={!selectedClass ? 'Select a class first' : 'Mark attendance by face photo'}
+                >
+                  📷 Mark by Face
+                </button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Class Selection */}
                 <div>
@@ -223,6 +292,143 @@ const AttendanceView = () => {
           </div>
         </main>
       </div>
+
+      {/* Mark by Face Modal */}
+      {showFaceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">📷 Mark Attendance by Face</h2>
+              <button onClick={closeFaceModal} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Class + Date summary */}
+              <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-800">
+                <span className="font-semibold">Class:</span> {classes.find(c => String(c.id) === String(selectedClass))?.class_name || selectedClass}
+                &nbsp;&nbsp;<span className="font-semibold">Date:</span> {selectedDate}
+              </div>
+
+              {/* Image upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Face Photo</label>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition"
+                >
+                  {facePreview ? (
+                    <img src={facePreview} alt="Preview" className="mx-auto max-h-48 rounded-lg object-contain" />
+                  ) : (
+                    <div className="py-6 text-gray-500">
+                      <div className="text-4xl mb-2">🖼️</div>
+                      <p className="text-sm">Click to upload a face photo</p>
+                      <p className="text-xs mt-1">JPG, PNG — max 10 MB</p>
+                    </div>
+                  )}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFaceImageChange}
+                />
+                {facePreview && (
+                  <button
+                    onClick={() => { setFaceImage(null); setFacePreview(null); setFaceResult(null); fileInputRef.current.value = '' }}
+                    className="mt-2 text-xs text-red-500 hover:underline"
+                  >
+                    Remove image
+                  </button>
+                )}
+              </div>
+
+              {/* Threshold slider */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Similarity Threshold: <span className="font-bold text-blue-600">{faceThreshold.toFixed(2)}</span>
+                </label>
+                <input
+                  type="range"
+                  min="0.30"
+                  max="0.99"
+                  step="0.01"
+                  value={faceThreshold}
+                  onChange={(e) => setFaceThreshold(parseFloat(e.target.value))}
+                  className="w-full accent-blue-600"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>0.30 (lenient)</span>
+                  <span>0.99 (strict)</span>
+                </div>
+              </div>
+
+              {/* Result */}
+              {faceResult && (
+                <div className={`rounded-lg p-4 text-sm ${
+                  faceResult.type === 'success' ? 'bg-green-50 border border-green-200' :
+                  faceResult.type === 'nomatch' ? 'bg-yellow-50 border border-yellow-200' :
+                  'bg-red-50 border border-red-200'
+                }`}>
+                  {faceResult.type === 'success' && (
+                    <>
+                      <p className="font-bold text-green-800 text-base">
+                        {faceResult.data.already_marked ? '⚠️ Already Marked' : '✓ Match Found'}
+                      </p>
+                      <p className="text-green-700 mt-1">
+                        <span className="font-semibold">{faceResult.data.match?.name}</span>
+                        {' '}({faceResult.data.match?.student_id})
+                      </p>
+                      <p className="text-green-700">
+                        Cosine similarity: <span className="font-bold">{faceResult.data.confidence != null ? `${(faceResult.data.confidence * 100).toFixed(1)}%` : '—'}</span>
+                      </p>
+                      {!faceResult.data.already_marked && (
+                        <p className="text-green-700">
+                          Status: <span className="font-semibold capitalize">{faceResult.data.status}</span>
+                        </p>
+                      )}
+                      <p className="text-green-600 text-xs mt-1">{faceResult.data.message}</p>
+                    </>
+                  )}
+                  {faceResult.type === 'nomatch' && (
+                    <>
+                      <p className="font-bold text-yellow-800 text-base">No Match</p>
+                      <p className="text-yellow-700 mt-1">
+                        Best cosine similarity: <span className="font-bold">
+                          {faceResult.data?.confidence != null ? `${(faceResult.data.confidence * 100).toFixed(1)}%` : '—'}
+                        </span>
+                      </p>
+                      <p className="text-yellow-600 text-xs mt-1">{faceResult.data?.message || 'No enrolled student exceeded the threshold.'}</p>
+                    </>
+                  )}
+                  {faceResult.type === 'error' && (
+                    <>
+                      <p className="font-bold text-red-800 text-base">Error</p>
+                      <p className="text-red-700 text-xs mt-1">{faceResult.data?.error || 'An unexpected error occurred.'}</p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 p-6 pt-0">
+              <button
+                onClick={handleMarkByFace}
+                disabled={faceLoading || !faceImage}
+                className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {faceLoading ? 'Processing...' : 'Identify & Mark'}
+              </button>
+              <button
+                onClick={closeFaceModal}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

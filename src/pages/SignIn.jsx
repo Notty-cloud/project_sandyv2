@@ -30,7 +30,8 @@ const SignIn = ({ onLogin }) => {
         navigate('/dashboard')
       }, 1000)
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid credentials. Please try again.')
+      const data = err.response?.data
+      setError(data?.detail || data?.message || 'Invalid credentials. Please try again.')
     } finally {
       setLoading(false)
     }

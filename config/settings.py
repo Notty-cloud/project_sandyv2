@@ -49,6 +49,9 @@ CORS_ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
+if DEBUG:
+    CORS_ALLOWED_ORIGIN_REGEXES = [r'^http://localhost:\d+$']
+
 ROOT_URLCONF = 'config.urls'
 
 WSGI_APPLICATION = 'config.wsgi.application'

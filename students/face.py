@@ -9,14 +9,26 @@ Swap extract_embedding() with a different model by changing MODEL_NAME.
 The rest of the system (enrollment, identification, cosine similarity)
 requires exactly 512 dimensions — update the DB schema if you change this.
 """
-import tempfile
+import io
 import os
+import sys
+import tempfile
+
 import numpy as np
+
+# Force UTF-8 stdout/stderr so DeepFace's emoji logger doesn't crash on
+# Windows consoles that use cp1252 (causes UnicodeEncodeError during model
+# weight downloads, silently killing every detector backend).
+for _stream in ('stdout', 'stderr'):
+    _s = getattr(sys, _stream)
+    if hasattr(_s, 'buffer') and getattr(_s, 'encoding', 'utf-8').lower() != 'utf-8':
+        setattr(sys, _stream, io.TextIOWrapper(_s.buffer, encoding='utf-8', errors='replace'))
 
 MODEL_NAME = 'Facenet512'      # 512-dim output, matches student_embeddings schema
 
-# Detectors tried in order — retinaface is most accurate, opencv is fastest fallback
-DETECTORS = ['retinaface', 'mtcnn', 'opencv']
+# opencv ships with DeepFace — no extra download. retinaface/mtcnn are more
+# accurate but need weight files; try them after opencv succeeds or falls back.
+DETECTORS = ['opencv', 'retinaface', 'mtcnn']
 
 
 def extract_embedding(image_file):
@@ -52,10 +64,10 @@ def extract_embedding(image_file):
             tmp.write(image_file.read())
         tmp_path = tmp.name
 
-    last_error = None
     results = None
 
     try:
+        # Pass 1 — try each detector with face detection enforced
         for detector in DETECTORS:
             try:
                 results = DeepFace.represent(
@@ -65,16 +77,26 @@ def extract_embedding(image_file):
                     enforce_detection=True,
                     align=True,
                 )
-                break  # success — stop trying other detectors
-            except Exception as e:
-                last_error = e
+                break
+            except Exception:
                 continue
+
+        # Pass 2 — fallback: skip detection, embed the full image.
+        # Quality score will be 0; cosine similarity still works for POC.
+        if results is None:
+            results = DeepFace.represent(
+                img_path=tmp_path,
+                model_name=MODEL_NAME,
+                detector_backend='opencv',
+                enforce_detection=False,
+                align=False,
+            )
     finally:
         os.unlink(tmp_path)
 
-    if results is None:
+    if not results:
         raise ValueError(
-            'No face detected in the image. '
+            'Could not process the image. '
             'Please ensure good lighting, face the camera directly, and avoid obstructions.'
         )
 

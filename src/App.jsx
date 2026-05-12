@@ -7,10 +7,16 @@ import AttendanceView from './pages/AttendanceView'
 import EnrollmentHub from './pages/EnrollmentHub'
 import ManualOverride from './pages/ManualOverride'
 import AdminManagement from './pages/AdminManagement'
+import ClassManagement from './pages/ClassManagement'
 
 const isLevel3Admin = () => {
   const user = authService.getUserData()
   return user?.role === 'admin' && user?.authorization_level >= 3
+}
+
+const isLevel2Admin = () => {
+  const user = authService.getUserData()
+  return user?.role === 'admin' && user?.authorization_level >= 2
 }
 
 function App() {
@@ -51,6 +57,12 @@ function App() {
         <Route
           path="/override"
           element={isAuthenticated ? <ManualOverride /> : <Navigate to="/signin" />}
+        />
+        <Route
+          path="/classes"
+          element={isAuthenticated
+            ? (isLevel2Admin() ? <ClassManagement /> : <Navigate to="/dashboard" />)
+            : <Navigate to="/signin" />}
         />
         <Route
           path="/admin-management"
