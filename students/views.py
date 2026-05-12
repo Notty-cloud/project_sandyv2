@@ -7,7 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from admins.permissions import RoleLevelPermission
 from .models import Student, StudentEmbedding
 from .serializers import StudentSerializer, StudentDetailSerializer, StudentEmbeddingSerializer
-from .face import extract_embedding, cosine_similarity
+from .face import extract_embedding, extract_all_embeddings, cosine_similarity
 
 
 class StudentViewSet(viewsets.ModelViewSet):
@@ -194,6 +194,67 @@ class StudentViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_200_OK)
 
         return Response({'match': None, 'confidence': round(best_score, 4), 'message': 'No match above threshold.'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='identify-group',
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def identify_group(self, request):
+        """
+        POST /api/v1/students/identify-group/
+        Detect every face in a group photo and return the best DB match for each.
+
+        Form fields:
+          image      (file)   — photo containing one or more faces
+          tenant_id  (string) — required
+          threshold  (float)  — match threshold, default 0.65
+        """
+        tenant_id = request.data.get('tenant_id')
+        image_file = request.FILES.get('image')
+
+        try:
+            threshold = float(request.data.get('threshold', 0.65))
+            assert 0.0 < threshold <= 1.0
+        except (ValueError, AssertionError):
+            return Response({'threshold': 'Must be a number between 0.0 and 1.0.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not tenant_id:
+            return Response({'error': 'tenant_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not image_file:
+            return Response({'error': 'image is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            faces = extract_all_embeddings(image_file)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': f'Face processing failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        active_embeddings = list(
+            StudentEmbedding.objects.filter(tenant_id=tenant_id, is_active=True).select_related('student')
+        )
+
+        results = []
+        for face in faces:
+            best_score = -1.0
+            best_emb = None
+            for emb in active_embeddings:
+                score = cosine_similarity(face['embedding'], emb.embedding)
+                if score > best_score:
+                    best_score = score
+                    best_emb = emb
+
+            results.append({
+                'face_index': face['face_index'],
+                'facial_area': face.get('facial_area'),
+                'quality_score': face['quality_score'],
+                'match': StudentSerializer(best_emb.student).data if (best_score >= threshold and best_emb) else None,
+                'confidence': round(best_score, 4),
+            })
+
+        return Response({'face_count': len(faces), 'results': results}, status=status.HTTP_200_OK)
 
 
 class StudentEmbeddingViewSet(viewsets.ModelViewSet):

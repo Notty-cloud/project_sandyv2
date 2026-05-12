@@ -112,7 +112,14 @@ function EnrollmentModal({ student, onClose, onEnrolled }) {
     return () => { enrollCam.stop(); verifyCam.stop() }
   }, [phase, enrollMode, verifyMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const close = () => { enrollCam.stop(); verifyCam.stop(); onClose() }
+  const close = useCallback(() => { enrollCam.stop(); verifyCam.stop(); onClose() }, [enrollCam, verifyCam, onClose])
+
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') close() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [close])
 
   const handleEnrollCapture = async () => {
     const r = await enrollCam.capture(); if (!r) return
@@ -184,8 +191,10 @@ function EnrollmentModal({ student, onClose, onEnrolled }) {
   const phaseTitle = { enroll: 'Enrol Student', enrolled: 'Enrolment Complete', verify: 'Verify Recognition', verified: 'Recognition Result' }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4"
+      onClick={close}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-5 border-b border-gray-200 flex items-start justify-between sticky top-0 bg-white rounded-t-2xl z-10">
           <div>
@@ -373,6 +382,114 @@ function EnrollmentModal({ student, onClose, onEnrolled }) {
   )
 }
 
+// ─── Group Identify Modal ─────────────────────────────────────────────────────
+function GroupIdentifyModal({ onClose }) {
+  const userData = authService.getUserData()
+  const fileRef = useRef(null)
+  const [preview, setPreview] = useState(null)
+  const [blob, setBlob] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [results, setResults] = useState(null)
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const handleFile = (e) => {
+    const f = e.target.files[0]; if (!f) return
+    setResults(null); setError('')
+    const reader = new FileReader()
+    reader.onload = (ev) => { setPreview(ev.target.result); setBlob(f) }
+    reader.readAsDataURL(f)
+  }
+
+  const handleIdentify = async () => {
+    if (!blob) return setError('Please select a photo first.')
+    const tenantId = userData?.tenant_id
+    if (!tenantId) return setError('Session expired.')
+    const formData = new FormData()
+    formData.append('image', blob)
+    formData.append('tenant_id', tenantId)
+    formData.append('threshold', '0.65')
+    try {
+      setLoading(true); setError('')
+      const res = await studentAPI.identifyGroup(formData)
+      setResults(res.data)
+    } catch (err) {
+      const d = err.response?.data
+      setError(d?.error || d?.detail || 'Identification failed.')
+    } finally { setLoading(false) }
+  }
+
+  const confColor = (c) => c >= 0.65 ? 'text-green-600' : c >= 0.45 ? 'text-amber-600' : 'text-red-500'
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-screen overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="p-5 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Group Photo Identification</h3>
+            <p className="text-sm text-gray-500 mt-0.5">Upload a photo containing multiple people</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none ml-4">&times;</button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <label className="block w-full border-2 border-dashed border-gray-300 rounded-xl p-5 text-center cursor-pointer hover:border-blue-400 transition">
+            <p className="text-gray-500 text-sm mb-1">Click to select a group photo</p>
+            <p className="text-gray-400 text-xs">JPG or PNG — all faces must be clearly visible</p>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+          </label>
+
+          {preview && (
+            <img src={preview} alt="Group photo" className="w-full rounded-xl object-contain" style={{ maxHeight: 280 }} />
+          )}
+
+          {error && <p className="text-red-500 text-sm bg-red-50 p-2 rounded-lg">{error}</p>}
+
+          <button onClick={handleIdentify} disabled={loading || !blob}
+            className="w-full py-2.5 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:opacity-50 transition">
+            {loading
+              ? <span className="flex items-center justify-center gap-2"><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>Identifying all faces…</span>
+              : 'Identify All Faces'}
+          </button>
+
+          {results && (
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-2">
+                {results.face_count} face{results.face_count !== 1 ? 's' : ''} detected
+              </p>
+              <div className="space-y-2">
+                {results.results.map((r) => (
+                  <div key={r.face_index}
+                    className={`flex items-center gap-3 p-3 rounded-xl border ${r.match ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                    <div className={`text-2xl w-8 text-center flex-shrink-0`}>{r.match ? '✅' : '❓'}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-gray-900 truncate">
+                        {r.match ? r.match.name : 'Unknown person'}
+                      </p>
+                      {r.match && <p className="text-xs text-gray-500">{r.match.student_id} · Gr.{r.match.grade}{r.match.section}</p>}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className={`text-sm font-bold ${confColor(r.confidence)}`}>{(r.confidence * 100).toFixed(1)}%</p>
+                      <p className="text-xs text-gray-400">similarity</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button onClick={onClose} className="w-full py-2 border border-gray-300 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition">Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Student table (shared component) ─────────────────────────────────────────
 function StudentTable({ students, enrollments, onEnroll }) {
   const getEnrollment = (id) => enrollments.find((e) => e.student === id)
@@ -438,6 +555,7 @@ const EnrollmentHub = () => {
   // Shared data
   const [enrollments, setEnrollments] = useState([])
   const [modalStudent, setModalStudent] = useState(null)
+  const [showGroupIdentify, setShowGroupIdentify] = useState(false)
 
   // Teacher-specific
   const [myClasses, setMyClasses] = useState([])
@@ -540,6 +658,15 @@ const EnrollmentHub = () => {
           <div className="max-w-7xl mx-auto">
             {pageError   && <Alert type="error"   message={pageError}   onClose={() => setPageError('')} />}
             {pageSuccess && <Alert type="success" message={pageSuccess} onClose={() => setPageSuccess('')} />}
+
+            {/* Group photo identify button */}
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setShowGroupIdentify(true)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition">
+                Group Photo Identify
+              </button>
+            </div>
 
             {/* ── TEACHER VIEW ── */}
             {isTeacher && (
@@ -696,6 +823,10 @@ const EnrollmentHub = () => {
           onClose={() => setModalStudent(null)}
           onEnrolled={onEnrolled}
         />
+      )}
+
+      {showGroupIdentify && (
+        <GroupIdentifyModal onClose={() => setShowGroupIdentify(false)} />
       )}
     </div>
   )

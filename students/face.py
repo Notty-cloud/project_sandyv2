@@ -116,6 +116,71 @@ def extract_embedding(image_file):
     }
 
 
+def extract_all_embeddings(image_file):
+    """
+    Extract 512-dim embeddings for every face detected in an image.
+
+    Returns:
+        list of dicts, one per face:
+          face_index   (int)         — 0-based order
+          embedding    (list[float]) — 512 floats, unit-normalized
+          quality_score(float)       — detection confidence
+          facial_area  (dict)        — {x, y, w, h} bounding box if available
+
+    Raises:
+        ValueError: no faces detected
+    """
+    from deepface import DeepFace
+
+    if hasattr(image_file, 'seek'):
+        image_file.seek(0)
+
+    suffix = _get_suffix(image_file)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        if hasattr(image_file, 'chunks'):
+            for chunk in image_file.chunks():
+                tmp.write(chunk)
+        else:
+            tmp.write(image_file.read())
+        tmp_path = tmp.name
+
+    results = None
+    try:
+        for detector in DETECTORS:
+            try:
+                results = DeepFace.represent(
+                    img_path=tmp_path,
+                    model_name=MODEL_NAME,
+                    detector_backend=detector,
+                    enforce_detection=True,
+                    align=True,
+                )
+                break
+            except Exception:
+                continue
+
+        if not results:
+            raise ValueError(
+                'No faces detected. Use a clear photo with visible faces and good lighting.'
+            )
+    finally:
+        os.unlink(tmp_path)
+
+    faces = []
+    for i, r in enumerate(results):
+        raw = np.array(r['embedding'], dtype=np.float32)
+        norm = np.linalg.norm(raw)
+        if norm > 0:
+            raw = raw / norm
+        faces.append({
+            'face_index': i,
+            'embedding': raw.tolist(),
+            'quality_score': round(float(r.get('face_confidence', 0.0)), 4),
+            'facial_area': r.get('facial_area', {}),
+        })
+    return faces
+
+
 def cosine_similarity(vec_a, vec_b):
     """Cosine similarity between two lists/arrays. Returns float in [-1, 1]."""
     a = np.array(vec_a, dtype=np.float32)
