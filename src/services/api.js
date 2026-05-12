@@ -47,7 +47,7 @@ export const adminAPI = {
 
 // Students APIs
 export const studentAPI = {
-  getAllStudents: (classId) => axiosInstance.get('/students/', { params: { classId } }),
+  getAllStudents: (params) => axiosInstance.get('/students/', { params }),
   getStudent: (id) => axiosInstance.get(`/students/${id}/`),
   createStudent: (data) => axiosInstance.post('/students/', data),
   updateStudent: (id, data) => axiosInstance.put(`/students/${id}/`, data),

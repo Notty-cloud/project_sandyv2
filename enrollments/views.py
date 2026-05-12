@@ -9,18 +9,37 @@ from .serializers import EnrollmentSerializer
 
 class EnrollmentViewSet(viewsets.ModelViewSet):
     permission_classes = [RoleLevelPermission]
-    required_roles = ('admin',)
-    minimum_authorization_level = 2
+    required_roles = ('teacher', 'admin')
+    minimum_authorization_level = 1
     serializer_class = EnrollmentSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['tenant_id', 'student', 'academic_year', 'status', 'embedding_generated']
     search_fields = ['student__name', 'student__student_id']
 
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            self.required_roles = ('admin',)
+            self.minimum_authorization_level = 2
+        return super().get_permissions()
+
     def get_queryset(self):
-        tenant_id = self.request.query_params.get('tenant_id')
+        user = self.request.user
         qs = Enrollment.objects.select_related('student', 'enrolled_by').all()
+
+        tenant_id = self.request.query_params.get('tenant_id')
         if tenant_id:
             qs = qs.filter(tenant_id=tenant_id)
+
+        # Teachers only see enrollments for students in their assigned classes
+        if user.role == 'teacher':
+            from classes.models import Class
+            from django.db.models import Q
+            teacher_classes = Class.objects.filter(teacher=user).values('grade', 'section')
+            q = Q()
+            for cls in teacher_classes:
+                q |= Q(student__grade=cls['grade'], student__section=cls['section'])
+            qs = qs.filter(q) if q else qs.none()
+
         return qs
 
     def perform_create(self, serializer):
