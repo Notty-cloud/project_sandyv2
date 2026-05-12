@@ -1,0 +1,290 @@
+[
+  {
+    "model": "admins.admin",
+    "pk": "b868f285-a5cb-47d3-8b5b-d3b53e200b38",
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "admin_name": "admin",
+      "email": "notowt@hotmail.com",
+      "password_hash": "bcrypt_sha256$$2b$12$a076ufVXuubU4Rb4F1BISuyAfryu.2ncKjnsR3zfLGSPmfWtQ/yjC",
+      "role": "admin",
+      "authorization_level": 3,
+      "is_active": true,
+      "is_locked": false,
+      "failed_login_attempts": 0,
+      "must_change_password": false,
+      "last_login_at": null,
+      "created_at": "2026-05-07T15:47:58.185676+00:00",
+      "updated_at": "2026-05-07T15:47:58.185676+00:00"
+    }
+  },
+  {
+    "model": "admins.admin",
+    "pk": "325914a2-3d34-4c4e-8e0c-2a45d4275d27",
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "admin_name": "teacher1",
+      "email": "teacher1@school.com",
+      "password_hash": "bcrypt_sha256$$2b$12$otth8eoxf8TZKjPD27HzHe6/isiGFJ4bAt9zXyGQYIYGMz2VtGZRG",
+      "role": "teacher",
+      "authorization_level": 1,
+      "is_active": true,
+      "is_locked": false,
+      "failed_login_attempts": 0,
+      "must_change_password": false,
+      "last_login_at": null,
+      "created_at": "2026-05-12T14:03:47.592528+00:00",
+      "updated_at": "2026-05-12T14:03:47.592528+00:00"
+    }
+  },
+  {
+    "model": "admins.admin",
+    "pk": "98be8741-6d58-4048-9dde-f2bab308729c",
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "admin_name": "teacher2",
+      "email": "teacher2@school.com",
+      "password_hash": "bcrypt_sha256$$2b$12$ljHVufhnJO3PjJgqQUI0Ee7v/wy4TmsceKVWZGpEDLEX/rIM6Kq9q",
+      "role": "teacher",
+      "authorization_level": 1,
+      "is_active": true,
+      "is_locked": false,
+      "failed_login_attempts": 0,
+      "must_change_password": false,
+      "last_login_at": null,
+      "created_at": "2026-05-12T14:03:47.930486+00:00",
+      "updated_at": "2026-05-12T14:03:47.930486+00:00"
+    }
+  },
+  {
+    "model": "admins.admin",
+    "pk": "ac9138af-cba9-417c-8206-c51398e210f6",
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "admin_name": "coordinator1",
+      "email": "coordinator1@school.com",
+      "password_hash": "bcrypt_sha256$$2b$12$yZp1RFCQySsP3G.4w9a.v.I6x3JtZQPAKUxxiYDCyi8ayr/.fn7Fe",
+      "role": "admin",
+      "authorization_level": 2,
+      "is_active": true,
+      "is_locked": false,
+      "failed_login_attempts": 0,
+      "must_change_password": false,
+      "last_login_at": null,
+      "created_at": "2026-05-12T14:03:48.241938+00:00",
+      "updated_at": "2026-05-12T14:03:48.241938+00:00"
+    }
+  },
+  {
+    "model": "students.student",
+    "pk": "a6b9dd5d-d9c6-4da8-aa56-d4d1097a24dd",
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "student_id": "STU-001",
+      "name": "Juan dela Cruz",
+      "grade": "10",
+      "section": "A",
+      "is_active": true,
+      "created_at": "2026-05-12T13:19:46.582335+00:00",
+      "updated_at": "2026-05-12T13:19:46.582335+00:00"
+    }
+  },
+  {
+    "model": "students.student",
+    "pk": "a5f95546-b832-4a0f-91aa-e89897ac59c3",
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "student_id": "STU-002",
+      "name": "Maria Santos",
+      "grade": "10",
+      "section": "A",
+      "is_active": true,
+      "created_at": "2026-05-12T13:19:46.590274+00:00",
+      "updated_at": "2026-05-12T13:19:46.590274+00:00"
+    }
+  },
+  {
+    "model": "students.student",
+    "pk": "d9c6ec2c-647a-4bd7-a941-becf05ec56c5",
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "student_id": "STU-003",
+      "name": "Jose Reyes",
+      "grade": "10",
+      "section": "A",
+      "is_active": true,
+      "created_at": "2026-05-12T13:19:46.596481+00:00",
+      "updated_at": "2026-05-12T13:19:46.596481+00:00"
+    }
+  },
+  {
+    "model": "students.student",
+    "pk": "414ca446-05d0-4e4b-aa8b-f3b19ba0d3ff",
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "student_id": "STU-004",
+      "name": "Ana Garcia",
+      "grade": "10",
+      "section": "B",
+      "is_active": true,
+      "created_at": "2026-05-12T13:19:46.602943+00:00",
+      "updated_at": "2026-05-12T13:19:46.602943+00:00"
+    }
+  },
+  {
+    "model": "students.student",
+    "pk": "ce55fe19-3912-4017-aeb2-f5ac44c90f54",
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "student_id": "STU-005",
+      "name": "Pedro Mendoza",
+      "grade": "10",
+      "section": "B",
+      "is_active": true,
+      "created_at": "2026-05-12T13:19:46.609007+00:00",
+      "updated_at": "2026-05-12T13:19:46.609007+00:00"
+    }
+  },
+  {
+    "model": "students.student",
+    "pk": "48549948-a831-446c-b7f0-8f91c3237b77",
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "student_id": "STU-006",
+      "name": "Rosa Villanueva",
+      "grade": "10",
+      "section": "B",
+      "is_active": true,
+      "created_at": "2026-05-12T13:19:46.616920+00:00",
+      "updated_at": "2026-05-12T13:19:46.616920+00:00"
+    }
+  },
+  {
+    "model": "classes.class",
+    "pk": 3,
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "grade": "10",
+      "section": "A",
+      "class_name": "Mathematics — Grade 10A",
+      "subject": "Mathematics",
+      "teacher": "325914a2-3d34-4c4e-8e0c-2a45d4275d27",
+      "is_active": true,
+      "academic_year": "2024-2025",
+      "created_at": "2026-05-12T13:50:36.714281+00:00",
+      "updated_at": "2026-05-12T13:50:36.714281+00:00"
+    }
+  },
+  {
+    "model": "classes.class",
+    "pk": 4,
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "grade": "10",
+      "section": "A",
+      "class_name": "English — Grade 10A",
+      "subject": "English",
+      "teacher": "325914a2-3d34-4c4e-8e0c-2a45d4275d27",
+      "is_active": true,
+      "academic_year": "2024-2025",
+      "created_at": "2026-05-12T13:50:36.722188+00:00",
+      "updated_at": "2026-05-12T13:50:36.722188+00:00"
+    }
+  },
+  {
+    "model": "classes.class",
+    "pk": 5,
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "grade": "10",
+      "section": "A",
+      "class_name": "Science — Grade 10A",
+      "subject": "Science",
+      "teacher": "98be8741-6d58-4048-9dde-f2bab308729c",
+      "is_active": true,
+      "academic_year": "2024-2025",
+      "created_at": "2026-05-12T13:50:36.730335+00:00",
+      "updated_at": "2026-05-12T13:50:36.730335+00:00"
+    }
+  },
+  {
+    "model": "classes.class",
+    "pk": 6,
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "grade": "10",
+      "section": "B",
+      "class_name": "Mathematics — Grade 10B",
+      "subject": "Mathematics",
+      "teacher": null,
+      "is_active": true,
+      "academic_year": "2024-2025",
+      "created_at": "2026-05-12T13:50:36.737988+00:00",
+      "updated_at": "2026-05-12T13:50:36.737988+00:00"
+    }
+  },
+  {
+    "model": "classes.class",
+    "pk": 7,
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "grade": "10",
+      "section": "B",
+      "class_name": "English — Grade 10B",
+      "subject": "English",
+      "teacher": null,
+      "is_active": true,
+      "academic_year": "2024-2025",
+      "created_at": "2026-05-12T13:50:36.746099+00:00",
+      "updated_at": "2026-05-12T13:50:36.746099+00:00"
+    }
+  },
+  {
+    "model": "classes.class",
+    "pk": 8,
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "grade": "10",
+      "section": "B",
+      "class_name": "Science — Grade 10B",
+      "subject": "Science",
+      "teacher": "98be8741-6d58-4048-9dde-f2bab308729c",
+      "is_active": true,
+      "academic_year": "2024-2025",
+      "created_at": "2026-05-12T13:50:36.752712+00:00",
+      "updated_at": "2026-05-12T13:50:36.752712+00:00"
+    }
+  },
+  {
+    "model": "classes.class",
+    "pk": 9,
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "grade": "10",
+      "section": "A",
+      "class_name": "Filipino — Grade 10A",
+      "subject": "Filipino",
+      "teacher": null,
+      "is_active": true,
+      "academic_year": "2024-2025",
+      "created_at": "2026-05-12T13:50:36.759661+00:00",
+      "updated_at": "2026-05-12T13:50:36.759661+00:00"
+    }
+  },
+  {
+    "model": "classes.class",
+    "pk": 10,
+    "fields": {
+      "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
+      "grade": "10",
+      "section": "A",
+      "class_name": "Social Studies — Grade 10A",
+      "subject": "Social Studies",
+      "teacher": null,
+      "is_active": true,
+      "academic_year": "2024-2025",
+      "created_at": "2026-05-12T13:50:36.766279+00:00",
+      "updated_at": "2026-05-12T13:50:36.766279+00:00"
+    }
+  }
+]
