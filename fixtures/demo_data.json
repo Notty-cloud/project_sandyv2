@@ -44,7 +44,7 @@
       "tenant_id": "4a87cd06-36d8-4faf-bc10-667db9d83bba",
       "admin_name": "teacher2",
       "email": "teacher2@school.com",
-      "password_hash": "bcrypt_sha256$$2b$12$gFC9t7cMIdOrJCf1XRUBqeLrp54RD.qf.UThNOp3TXgjWDEVZRb7u",
+      "password_hash": "bcrypt_sha256$$2b$12$9SksVHifl8TXe1zrbxYck.WwxTot7mUixfm77W1f17k6UeAniNM6q",
       "role": "teacher",
       "authorization_level": 1,
       "is_active": true,
