@@ -67,8 +67,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
           threshold   (float)  — match confidence threshold, default 0.65
           location    (string) — camera/location label, optional
         """
+        from pgvector.django import CosineDistance
         from students.models import StudentEmbedding
-        from students.face import extract_embedding, cosine_similarity
+        from students.face import extract_embedding
         from django.utils import timezone
 
         tenant_id = request.data.get('tenant_id')
@@ -112,25 +113,23 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         query_embedding = face_data['embedding']
         face_confidence = face_data['quality_score']
 
-        # ── Find best matching student ────────────────────────────────────
-        active_embeddings = StudentEmbedding.objects.filter(
-            tenant_id=tenant_id,
-            is_active=True,
-        ).select_related('student')
+        # ── Find best matching student via pgvector nearest-neighbor ─────
+        best_emb = (
+            StudentEmbedding.objects
+            .filter(tenant_id=tenant_id, is_active=True)
+            .annotate(distance=CosineDistance('embedding', query_embedding))
+            .order_by('distance')
+            .select_related('student')
+            .first()
+        )
 
-        if not active_embeddings.exists():
+        if best_emb is None:
             return Response({'error': 'No enrolled students found.', 'match': None},
                             status=status.HTTP_404_NOT_FOUND)
 
-        best_score = -1
-        best_emb = None
-        for emb in active_embeddings:
-            score = cosine_similarity(query_embedding, emb.embedding)
-            if score > best_score:
-                best_score = score
-                best_emb = emb
+        best_score = 1.0 - float(best_emb.distance)
 
-        if best_score < threshold or best_emb is None:
+        if best_score < threshold:
             return Response({
                 'match': None,
                 'confidence': round(best_score, 4),

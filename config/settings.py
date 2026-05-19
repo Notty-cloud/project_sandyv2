@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+import dj_database_url
 import os
 
 load_dotenv()
@@ -57,11 +58,26 @@ ROOT_URLCONF = 'config.urls'
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # ─── DATABASE ────────────────────────────────────────────────────────────────
-# SQLite for POC. Swap ENGINE + NAME for PostgreSQL in production.
+_db_url = os.getenv('DATABASE_URL', '')
 DATABASES = {
+    'default': (
+        dj_database_url.parse(_db_url, conn_max_age=600, conn_health_checks=True)
+        if _db_url else
+        {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}
+    )
+}
+
+# ─── CACHE (Redis) ────────────────────────────────────────────────────────────
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+CACHES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'IGNORE_EXCEPTIONS': True,
+        },
+        'KEY_PREFIX': 'sandy',
     }
 }
 

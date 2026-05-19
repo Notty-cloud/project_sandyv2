@@ -12,6 +12,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
 
+from django.core.cache import cache
+
 from .models import Admin, AuthAuditLog, TokenBlacklist
 from .permissions import RoleLevelPermission
 from .serializers import AdminCreateSerializer, AdminSerializer, ChangePasswordSerializer, LoginSerializer
@@ -124,6 +126,12 @@ class AuthLogoutView(APIView):
             return Response({'detail': 'Invalid token claims.'}, status=status.HTTP_400_BAD_REQUEST)
 
         expires_at = datetime.fromtimestamp(exp, tz=dt_timezone.utc)
+        ttl = int((expires_at - datetime.now(tz=dt_timezone.utc)).total_seconds())
+        if ttl > 0:
+            try:
+                cache.set(f'blacklist:{jti}', 1, ttl)
+            except Exception:
+                pass  # Redis unavailable — DB record is the authoritative fallback
         TokenBlacklist.objects.get_or_create(
             jti=jti,
             defaults={'admin': request.user, 'expires_at': expires_at},

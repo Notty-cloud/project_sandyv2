@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from pgvector.django import HnswIndex, VectorField
 from admins.models import Admin
 
 
@@ -28,7 +29,7 @@ class Student(models.Model):
 class StudentEmbedding(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='embeddings')
     tenant_id = models.UUIDField()
-    embedding = models.JSONField()                  # list of 512 floats
+    embedding = VectorField(dimensions=512)
     version = models.IntegerField(default=1)
     quality_score = models.FloatField(null=True, blank=True)
     enrolled_at = models.DateTimeField(auto_now_add=True)
@@ -41,6 +42,13 @@ class StudentEmbedding(models.Model):
         indexes = [
             models.Index(fields=['student'], name='idx_student_embeddings_student'),
             models.Index(fields=['tenant_id'], name='idx_student_embeddings_tenant'),
+            HnswIndex(
+                name='idx_student_embeddings_hnsw',
+                fields=['embedding'],
+                m=16,
+                ef_construction=64,
+                opclasses=['vector_cosine_ops'],
+            ),
         ]
 
     def __str__(self):

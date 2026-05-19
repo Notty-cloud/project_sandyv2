@@ -4,180 +4,161 @@ import Header from '../components/Header'
 import Navigation from '../components/Navigation'
 import Alert from '../components/Alert'
 import { classAPI } from '../services/api'
+import { authService } from '../services/auth'
+
+const NAV_CARDS = [
+  {
+    section: 'ATTENDANCE',
+    title: '📋 View Class Attendance',
+    desc: 'View real-time attendance records and mark students present',
+    path: '/attendance',
+    btnLabel: 'Go to Attendance',
+    color: 'bg-blue-500 hover:bg-blue-600',
+    minLevel: 1,
+  },
+  {
+    section: 'ENROLLMENT',
+    title: '📷 Register New Students',
+    desc: 'Capture facial embeddings and enroll new students into the system',
+    path: '/enrollment',
+    btnLabel: 'Go to Enrollment',
+    color: 'bg-green-500 hover:bg-green-600',
+    minLevel: 2,
+    adminOnly: true,
+  },
+  {
+    section: 'MANUAL OVERRIDE',
+    title: '⚙️ Handle Failed Registrations',
+    desc: 'Manually adjust attendance for cases where face recognition failed',
+    path: '/override',
+    btnLabel: 'Go to Override',
+    color: 'bg-orange-500 hover:bg-orange-600',
+    minLevel: 2,
+    adminOnly: true,
+  },
+  {
+    section: 'ADMIN MANAGEMENT',
+    title: '🔑 Manage Staff Accounts',
+    desc: 'Create, unlock, and manage teacher and coordinator accounts',
+    path: '/admin-management',
+    btnLabel: 'Go to Admin Management',
+    color: 'bg-purple-500 hover:bg-purple-600',
+    minLevel: 3,
+    adminOnly: true,
+  },
+]
 
 const Dashboard = () => {
   const navigate = useNavigate()
+  const user = authService.getUserData()
+  const isTeacher = user?.role === 'teacher'
+  const level = user?.authorization_level ?? 1
+
   const [classes, setClasses] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchClasses()
+    const params = isTeacher ? { teacher: user.id } : {}
+    classAPI.getClasses(params)
+      .then(r => setClasses(r.data?.results ?? r.data))
+      .catch(() => setError('Failed to load classes.'))
+      .finally(() => setLoading(false))
   }, [])
 
-  const fetchClasses = async () => {
-    try {
-      setLoading(true)
-      const response = await classAPI.getClasses()
-      setClasses(response.data?.results ?? response.data)
-    } catch (err) {
-      setError('Failed to load classes. Please try again.')
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const visibleCards = NAV_CARDS.filter(c =>
+    level >= c.minLevel && (!c.adminOnly || !isTeacher)
+  )
+
+  const activeClasses = classes.filter(c => c.is_active)
 
   return (
     <div className="flex h-screen bg-gray-50">
       <Navigation currentPage="/dashboard" />
-      
+
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Central Navigation Dashboard" />
+        <Header title={isTeacher ? 'My Classes' : 'Dashboard'} />
 
         <main className="flex-1 overflow-auto p-6">
           <div className="max-w-7xl mx-auto">
             {error && <Alert type="error" message={error} onClose={() => setError('')} />}
 
             {loading ? (
-              <div className="text-center py-12">
-                <p className="text-gray-600">Loading classes...</p>
-              </div>
+              <div className="text-center py-12 text-gray-500">Loading…</div>
             ) : (
               <>
-                {/* Quick Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                {/* Stats */}
+                <div className={`grid gap-4 mb-8 ${isTeacher ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'}`}>
                   <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
-                    <p className="text-gray-600 text-sm">Total Classes</p>
+                    <p className="text-gray-500 text-sm">{isTeacher ? 'My Classes' : 'Total Classes'}</p>
                     <p className="text-3xl font-bold text-blue-600 mt-2">{classes.length}</p>
                   </div>
                   <div className="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
-                    <p className="text-gray-600 text-sm">Classes Today</p>
-                    <p className="text-3xl font-bold text-green-600 mt-2">
-                      {classes.filter(c => c.is_active).length}
-                    </p>
+                    <p className="text-gray-500 text-sm">Active Classes</p>
+                    <p className="text-3xl font-bold text-green-600 mt-2">{activeClasses.length}</p>
                   </div>
-                  <div className="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
-                    <p className="text-gray-600 text-sm">Pending Enrollments</p>
-                    <p className="text-3xl font-bold text-purple-600 mt-2">12</p>
-                  </div>
-                  <div className="bg-white p-6 rounded-lg shadow border-l-4 border-orange-500">
-                    <p className="text-gray-600 text-sm">Failed Registrations</p>
-                    <p className="text-3xl font-bold text-orange-600 mt-2">5</p>
-                  </div>
+                  {!isTeacher && (
+                    <>
+                      <div className="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
+                        <p className="text-gray-500 text-sm">Pending Enrollments</p>
+                        <p className="text-3xl font-bold text-purple-600 mt-2">—</p>
+                      </div>
+                      <div className="bg-white p-6 rounded-lg shadow border-l-4 border-orange-500">
+                        <p className="text-gray-500 text-sm">Failed Registrations</p>
+                        <p className="text-3xl font-bold text-orange-600 mt-2">—</p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                {/* Main Navigation Cards */}
+                {/* Navigation cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  {/* Attendance Card */}
-                  <div className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 cursor-pointer">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-gray-600 text-sm font-semibold">ATTENDANCE</p>
-                        <h3 className="text-2xl font-bold text-gray-900 mt-2">📋 View Class Attendance</h3>
-                        <p className="text-gray-600 text-sm mt-3">
-                          View real-time attendance records and status for all classes
-                        </p>
-                      </div>
-                      <span className="text-3xl">→</span>
+                  {visibleCards.map(card => (
+                    <div key={card.path} className="bg-white rounded-lg shadow hover:shadow-lg transition p-6">
+                      <p className="text-gray-500 text-xs font-semibold tracking-wide">{card.section}</p>
+                      <h3 className="text-xl font-bold text-gray-900 mt-2">{card.title}</h3>
+                      <p className="text-gray-500 text-sm mt-2">{card.desc}</p>
+                      <button
+                        onClick={() => navigate(card.path)}
+                        className={`mt-4 w-full text-white py-2 rounded-lg transition font-semibold ${card.color}`}
+                      >
+                        {card.btnLabel}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => navigate('/attendance')}
-                      className="mt-4 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition font-semibold"
-                    >
-                      Go to Attendance
-                    </button>
-                  </div>
-
-                  {/* Enrollment Card */}
-                  <div className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 cursor-pointer">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-gray-600 text-sm font-semibold">ENROLLMENT</p>
-                        <h3 className="text-2xl font-bold text-gray-900 mt-2">📷 Register New Students</h3>
-                        <p className="text-gray-600 text-sm mt-3">
-                          Capture facial embeddings and enroll new students
-                        </p>
-                      </div>
-                      <span className="text-3xl">→</span>
-                    </div>
-                    <button
-                      onClick={() => navigate('/enrollment')}
-                      className="mt-4 w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition font-semibold"
-                    >
-                      Go to Enrollment
-                    </button>
-                  </div>
-
-                  {/* Manual Override Card */}
-                  <div className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 cursor-pointer">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-gray-600 text-sm font-semibold">MANUAL OVERRIDE</p>
-                        <h3 className="text-2xl font-bold text-gray-900 mt-2">⚙️ Handle Failed Registrations</h3>
-                        <p className="text-gray-600 text-sm mt-3">
-                          Manually adjust attendance for failed AI registrations
-                        </p>
-                      </div>
-                      <span className="text-3xl">→</span>
-                    </div>
-                    <button
-                      onClick={() => navigate('/override')}
-                      className="mt-4 w-full bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600 transition font-semibold"
-                    >
-                      Go to Override
-                    </button>
-                  </div>
-
-                  {/* System Settings Card */}
-                  <div className="bg-white rounded-lg shadow hover:shadow-lg transition p-6">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-gray-600 text-sm font-semibold">SETTINGS</p>
-                        <h3 className="text-2xl font-bold text-gray-900 mt-2">⚡ System Configuration</h3>
-                        <p className="text-gray-600 text-sm mt-3">
-                          Manage system settings and user preferences
-                        </p>
-                      </div>
-                      <span className="text-3xl">→</span>
-                    </div>
-                    <button 
-                      className="mt-4 w-full bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600 transition font-semibold"
-                    >
-                      Go to Settings
-                    </button>
-                  </div>
+                  ))}
                 </div>
 
-                {/* Classes List */}
+                {/* Class list */}
                 <div className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">Active Classes</h2>
+                  <h2 className="text-lg font-bold text-gray-900 mb-4">
+                    {isTeacher ? 'Your Assigned Classes' : 'All Classes'}
+                  </h2>
                   {classes.length === 0 ? (
-                    <p className="text-gray-600 text-center py-6">No classes available</p>
+                    <p className="text-gray-500 text-center py-8">
+                      {isTeacher ? 'No classes assigned to your account yet.' : 'No classes found.'}
+                    </p>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead className="bg-gray-50 border-b">
                           <tr>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Class</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Grade</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Subject</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Teacher</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Class</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Grade</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Subject</th>
+                            {!isTeacher && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Teacher</th>}
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Status</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {classes.map((cls) => (
+                          {classes.map(cls => (
                             <tr key={cls.id} className="border-b hover:bg-gray-50">
-                              <td className="px-4 py-3 text-gray-900 font-medium">{cls.class_name || `${cls.grade}-${cls.section}`}</td>
+                              <td className="px-4 py-3 font-medium text-gray-900">{cls.class_name || `${cls.grade}-${cls.section}`}</td>
                               <td className="px-4 py-3 text-gray-600">{cls.grade}</td>
-                              <td className="px-4 py-3 text-gray-600">{cls.subject || '-'}</td>
-                              <td className="px-4 py-3 text-gray-600">{cls.teacher_id || 'Unassigned'}</td>
+                              <td className="px-4 py-3 text-gray-600">{cls.subject || '—'}</td>
+                              {!isTeacher && <td className="px-4 py-3 text-gray-600">{cls.teacher_name || cls.teacher_id || 'Unassigned'}</td>}
                               <td className="px-4 py-3">
-                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                  cls.is_active 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-gray-100 text-gray-800'
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                  cls.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
                                 }`}>
                                   {cls.is_active ? 'Active' : 'Inactive'}
                                 </span>

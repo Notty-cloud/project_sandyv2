@@ -1,5 +1,6 @@
 import jwt
 from django.conf import settings
+from django.core.cache import cache
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -28,6 +29,14 @@ class AdminJWTAuthentication(BaseAuthentication):
         jti = payload.get('jti')
         if not admin_id or not jti:
             raise AuthenticationFailed('Token is missing required claims.')
+
+        try:
+            if cache.get(f'blacklist:{jti}'):
+                raise AuthenticationFailed('Token has been revoked.')
+        except AuthenticationFailed:
+            raise
+        except Exception:
+            pass  # Redis unavailable — fall through to DB
 
         if TokenBlacklist.objects.filter(jti=jti).exists():
             raise AuthenticationFailed('Token has been revoked.')

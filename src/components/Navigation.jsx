@@ -5,17 +5,17 @@ import { authService } from '../services/auth'
 const Navigation = ({ currentPage }) => {
   const navigate = useNavigate()
   const user = authService.getUserData()
-  const isLevel3Admin = user?.role === 'admin' && user?.authorization_level >= 3
-
+  const isTeacher    = user?.role === 'teacher'
   const isLevel2Plus = user?.authorization_level >= 2
+  const isLevel3     = user?.role === 'admin' && user?.authorization_level >= 3
 
   const navItems = [
     { path: '/dashboard',        label: 'Dashboard',        icon: '📊' },
     { path: '/attendance',       label: 'Attendance',       icon: '📋' },
-    { path: '/enrollment',       label: 'Enrollment',       icon: '📷' },
+    { path: '/enrollment',       label: 'Enrollment',       icon: '📷', hidden: isTeacher },
     { path: '/classes',          label: 'Classes',          icon: '🏫', hidden: !isLevel2Plus },
-    { path: '/override',         label: 'Override',         icon: '⚙️' },
-    { path: '/admin-management', label: 'Admin Management', icon: '🔑', hidden: !isLevel3Admin },
+    { path: '/override',         label: 'Override',         icon: '⚙️', hidden: isTeacher },
+    { path: '/admin-management', label: 'Admin Management', icon: '🔑', hidden: !isLevel3 },
   ].filter((i) => !i.hidden)
 
   return (

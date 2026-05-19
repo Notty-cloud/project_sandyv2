@@ -9,15 +9,10 @@ import ManualOverride from './pages/ManualOverride'
 import AdminManagement from './pages/AdminManagement'
 import ClassManagement from './pages/ClassManagement'
 
-const isLevel3Admin = () => {
-  const user = authService.getUserData()
-  return user?.role === 'admin' && user?.authorization_level >= 3
-}
-
-const isLevel2Admin = () => {
-  const user = authService.getUserData()
-  return user?.role === 'admin' && user?.authorization_level >= 2
-}
+const getUser = () => authService.getUserData()
+const isLevel3Admin = () => { const u = getUser(); return u?.role === 'admin' && u?.authorization_level >= 3 }
+const isLevel2Admin = () => { const u = getUser(); return u?.role === 'admin' && u?.authorization_level >= 2 }
+const isAdminRole   = () => getUser()?.role === 'admin'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated())
@@ -52,11 +47,15 @@ function App() {
         />
         <Route
           path="/enrollment"
-          element={isAuthenticated ? <EnrollmentHub /> : <Navigate to="/signin" />}
+          element={isAuthenticated
+            ? (isAdminRole() ? <EnrollmentHub /> : <Navigate to="/dashboard" />)
+            : <Navigate to="/signin" />}
         />
         <Route
           path="/override"
-          element={isAuthenticated ? <ManualOverride /> : <Navigate to="/signin" />}
+          element={isAuthenticated
+            ? (isAdminRole() ? <ManualOverride /> : <Navigate to="/dashboard" />)
+            : <Navigate to="/signin" />}
         />
         <Route
           path="/classes"

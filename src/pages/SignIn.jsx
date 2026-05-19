@@ -2,7 +2,18 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authAPI } from '../services/api'
 import { authService } from '../services/auth'
-import Alert from '../components/Alert'
+
+const DEMO_USERS = [
+  { username: 'admin',        password: 'Admin@sandy1',  role: 'Head Teacher',  badge: 'bg-purple-100 text-purple-700' },
+  { username: 'coordinator1', password: 'Coord@sandy1',  role: 'Coordinator',   badge: 'bg-blue-100 text-blue-700'   },
+  { username: 'teacher1',     password: 'Teach@sandy1',  role: 'Teacher',       badge: 'bg-green-100 text-green-700' },
+  { username: 'teacher2',     password: 'Teach2@sandy1', role: 'Teacher',       badge: 'bg-green-100 text-green-700' },
+]
+
+const ERROR_MESSAGES = {
+  'Invalid credentials.': 'Username or password is incorrect.',
+  'Account is locked. Contact a level 3 admin to unlock it.': 'This account is locked. Contact your Head Teacher to unlock it.',
+}
 
 const SignIn = ({ onLogin }) => {
   const navigate = useNavigate()
@@ -10,56 +21,54 @@ const SignIn = ({ onLogin }) => {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    setSuccess('')
     setLoading(true)
-
     try {
       const response = await authAPI.login(adminName, password)
       const { access_token, admin } = response.data
-
       authService.login(access_token, admin)
-      setSuccess('Login successful! Redirecting...')
-      
-      setTimeout(() => {
-        onLogin()
-        navigate('/dashboard')
-      }, 1000)
+      onLogin()
+      navigate('/dashboard')
     } catch (err) {
-      const data = err.response?.data
-      setError(data?.detail || data?.message || 'Invalid credentials. Please try again.')
+      const raw = err.response?.data?.detail || err.response?.data?.message || ''
+      setError(ERROR_MESSAGES[raw] || raw || 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
+  const fillCredentials = (user) => {
+    setAdminName(user.username)
+    setPassword(user.password)
+    setError('')
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="text-4xl mb-4">🎓</div>
-          <h1 className="text-3xl font-bold text-gray-900">School Attendance</h1>
-          <p className="text-gray-600 mt-2">Facial Recognition System</p>
+          <div className="text-4xl mb-3">🎓</div>
+          <h1 className="text-2xl font-bold text-gray-900">School Attendance</h1>
+          <p className="text-sm text-gray-500 mt-1">Facial Recognition System</p>
         </div>
 
-        {/* Alerts */}
-        <div className="space-y-3 mb-6">
-          {error && <Alert type="error" message={error} onClose={() => setError('')} />}
-          {success && <Alert type="success" message={success} />}
-        </div>
+        {/* Error */}
+        {error && (
+          <div className="mb-5 flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+            <span className="mt-0.5 shrink-0">⚠️</span>
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Username */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Username
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
             <input
               type="text"
               value={adminName}
@@ -69,12 +78,8 @@ const SignIn = ({ onLogin }) => {
               required
             />
           </div>
-
-          {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input
               type="password"
               value={password}
@@ -84,30 +89,37 @@ const SignIn = ({ onLogin }) => {
               required
             />
           </div>
-
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+            className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
 
-        {/* Role Info */}
-        <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm font-semibold text-gray-900 mb-2">Demo Credentials:</p>
-          <ul className="text-xs text-gray-700 space-y-1">
-            <li>• Enter your assigned username and password</li>
-            <li>• Contact a level-3 admin for account access</li>
-          </ul>
+        {/* Demo accounts */}
+        <div className="mt-8">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Test accounts — click to fill</p>
+          <div className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
+            {DEMO_USERS.map((u) => (
+              <button
+                key={u.username}
+                type="button"
+                onClick={() => fillCredentials(u)}
+                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition"
+              >
+                <div>
+                  <span className="text-sm font-medium text-gray-800">{u.username}</span>
+                  <span className="ml-2 text-xs text-gray-400">{u.password}</span>
+                </div>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${u.badge}`}>{u.role}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-gray-500 mt-8">
-          © 2026 Facial Recognition Attendance System
-        </p>
+        <p className="text-center text-xs text-gray-400 mt-8">© 2026 Facial Recognition Attendance System</p>
       </div>
     </div>
   )
