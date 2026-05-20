@@ -89,20 +89,20 @@ Project Sandy addresses the administrative burden of manual attendance tracking 
 
 ## 4. Milestones
 
-### 4.1 Completed Milestones
-
-| Function | Purpose | Scope | Start Date | Completion Date |
-|---|---|---|---|---|
-| Planning | Define project goals, assign roles, establish version control, agree SDLC | Project scope, team structure, GitHub repository, branching strategy | [Month 1] | [Month 1] |
-| Requirements Analysis | Identify functional and non-functional requirements, define stakeholder needs | User stories, system requirements, role hierarchy, privacy considerations | [Month 1] | [Month 1] |
-| System Design | Architect the full system — database schema, API endpoints, UI wireframes, AI pipeline | React SPA, Django REST API, DeepFace AI engine, SQLite schema | [Month 1–2] | [Month 2] |
-| Development | Build all system components: frontend, backend, AI engine, authentication, role-based access | All core features implemented and integrated | [Month 2] | [Month 4] |
-
-### 4.2 Current Milestones
+### 4.1 Current Milestones
 
 | Function | Purpose | Scope | Start Date | Due Date |
 |---|---|---|---|---|
 | Testing | Validate all functional requirements against actual behaviour; identify and resolve defects | Functional testing, integration testing, UAT with fixture data across all roles | [Month 4] | [End Date] |
+
+### 4.2 Completed Milestones
+
+| Function | Purpose | Scope | Start Date | Completion Date |
+|---|---|---|---|---|
+| Development | Build all system components: frontend, backend, AI engine, authentication, role-based access | All core features implemented and integrated | [Month 2] | [Month 4] |
+| System Design | Architect the full system — database schema, API endpoints, UI wireframes, AI pipeline | React SPA, Django REST API, DeepFace AI engine, SQLite schema | [Month 1–2] | [Month 2] |
+| Requirements Analysis | Identify functional and non-functional requirements, define stakeholder needs | User stories, system requirements, role hierarchy, privacy considerations | [Month 1] | [Month 1] |
+| Planning | Define project goals, assign roles, establish version control, agree SDLC | Project scope, team structure, GitHub repository, branching strategy | [Month 1] | [Month 1] |
 
 ---
 
@@ -114,25 +114,25 @@ Project Sandy addresses the administrative burden of manual attendance tracking 
 - **C — Consulted:** Provides expertise or input
 - **I — Informed:** Kept up to date
 
-| Function | Kevin Bayley (Backend) | Shanade Alleyne (Frontend) | Samuel Springer (AI) | Nathan Graham (AI) | Druell Alstrom (QA) | Ashlie Fields (QA) |
-|---|---|---|---|---|---|---|
-| Project Planning & Coordination | A | C | C | C | C | C |
-| Requirements Analysis | A | R | R | R | R | R |
-| System Architecture & Design | A/R | C | C | C | I | I |
-| Database Design & Data Layer | A/R | I | C | C | I | I |
-| REST API Development | A/R | C | C | I | I | I |
-| Authentication & Security | A/R | C | I | I | I | I |
-| Frontend Development (React/Vite) | C | A/R | I | I | I | I |
-| UI/UX Design (Tailwind) | I | A/R | I | I | C | C |
-| AI Engine — Face Detection | C | I | A/R | R | I | I |
-| AI Engine — Embedding & Matching | C | I | A/R | R | I | I |
-| Frontend–Backend Integration | A | R | C | C | I | I |
-| Testing & Quality Assurance | I | I | I | I | A/R | R |
-| Test Data & Fixture Management | A | I | I | I | R | R |
-| Version Control & Branching | A | R | R | R | R | R |
-| Documentation | A | R | R | R | R | R |
-| Deployment | A | C | C | C | I | I |
-| Responsible AI & Privacy Review | A | C | R | R | C | C |
+| Function | Responsible | Accountable | Consulted | Informed |
+|---|---|---|---|---|
+| Project Planning & Coordination | Curtis Miller | Kevin Bayley | Curtis Miller | — |
+| Requirements Analysis | Shanade Alleyne, Samuel Springer, Nathan Graham, Druell Alstrom, Ashlie Fields | Kevin Bayley | Curtis Miller | — |
+| System Architecture & Design | Kevin Bayley | Kevin Bayley | Shanade Alleyne, Samuel Springer, Nathan Graham, Curtis Miller | — |
+| Database Design & Data Layer | Kevin Bayley | Kevin Bayley | Samuel Springer, Nathan Graham, Curtis Miller | — |
+| REST API Development | Kevin Bayley | Kevin Bayley | Shanade Alleyne, Samuel Springer, Curtis Miller | — |
+| Authentication & Security | Kevin Bayley | Kevin Bayley | Shanade Alleyne, Curtis Miller | — |
+| Frontend Development (React/Vite) | Shanade Alleyne | Shanade Alleyne | Kevin Bayley, Curtis Miller | — |
+| UI/UX Design (Tailwind) | Shanade Alleyne | Shanade Alleyne | Druell Alstrom, Ashlie Fields, Curtis Miller | — |
+| AI Engine — Face Detection | Samuel Springer, Nathan Graham | Samuel Springer | Kevin Bayley, Curtis Miller | — |
+| AI Engine — Embedding & Matching | Samuel Springer, Nathan Graham | Samuel Springer | Kevin Bayley, Curtis Miller | — |
+| Frontend–Backend Integration | Shanade Alleyne | Kevin Bayley | Samuel Springer, Nathan Graham, Curtis Miller | — |
+| Testing & Quality Assurance | All Team | Druell Alstrom | Curtis Miller | — |
+| Test Data & Fixture Management | Druell Alstrom, Ashlie Fields | Kevin Bayley | Curtis Miller | — |
+| Version Control & Branching | All Team | Kevin Bayley | Curtis Miller | — |
+| Documentation | All Team | Kevin Bayley | Curtis Miller | — |
+| Deployment | Kevin Bayley | Kevin Bayley | Shanade Alleyne, Samuel Springer, Nathan Graham, Curtis Miller | — |
+| Responsible AI & Privacy Review | Samuel Springer, Nathan Graham | Kevin Bayley | Shanade Alleyne, Druell Alstrom, Ashlie Fields, Curtis Miller | — |
 
 ---
 
