@@ -508,7 +508,7 @@ function StudentTable({ students, enrollments, onEnroll }) {
       <table className="w-full text-sm">
         <thead className="bg-gray-50 border-b">
           <tr>
-            {['Name', 'Student ID', 'Grade', 'Enrolment', 'Embedding', 'Action'].map((h) => (
+            {['Name', 'Student ID', 'Grade', 'Enrolment', 'Photos', 'Action'].map((h) => (
               <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
             ))}
           </tr>
@@ -518,6 +518,8 @@ function StudentTable({ students, enrollments, onEnroll }) {
             const enr = getEnrollment(student.id)
             const style = statusStyle(enr?.status)
             const isEnrolled = enr?.status === 'enrolled'
+            const photoCount = student.photo_count ?? 0
+            const canAddPhoto = photoCount < 5
             return (
               <tr key={student.id} className="hover:bg-gray-50 transition">
                 <td className="px-4 py-3 font-medium text-gray-900">{student.name}</td>
@@ -526,13 +528,24 @@ function StudentTable({ students, enrollments, onEnroll }) {
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${style.bg} ${style.text}`}>{style.label}</span>
                 </td>
-                <td className="px-4 py-3 text-sm">
-                  {enr?.embedding_generated ? <span className="text-green-600 font-medium">✓ Ready</span> : <span className="text-gray-400">—</span>}
+                <td className="px-4 py-3">
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                    photoCount === 0 ? 'bg-gray-100 text-gray-400'
+                    : photoCount >= 3 ? 'bg-green-100 text-green-700'
+                    : 'bg-yellow-100 text-yellow-700'
+                  }`} title={photoCount >= 5 ? 'Maximum photos reached' : `${5 - photoCount} more photo${5 - photoCount !== 1 ? 's' : ''} can improve accuracy`}>
+                    {photoCount}/5
+                  </span>
                 </td>
                 <td className="px-4 py-3">
-                  <button onClick={() => onEnroll(student)}
-                    className={`px-3 py-1 text-xs rounded font-semibold transition ${isEnrolled ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
-                    {isEnrolled ? '🔄 Re-enrol' : '📷 Enrol'}
+                  <button onClick={() => onEnroll(student)} disabled={!canAddPhoto}
+                    title={!canAddPhoto ? 'Maximum 5 photos reached' : isEnrolled ? 'Add another photo to improve recognition accuracy' : 'Capture face photo to enrol'}
+                    className={`px-3 py-1 text-xs rounded font-semibold transition ${
+                      !canAddPhoto ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : isEnrolled ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}>
+                    {!canAddPhoto ? '✓ Max Photos' : isEnrolled ? '📷 Add Photo' : '📷 Enrol'}
                   </button>
                 </td>
               </tr>

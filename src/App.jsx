@@ -8,6 +8,7 @@ import EnrollmentHub from './pages/EnrollmentHub'
 import ManualOverride from './pages/ManualOverride'
 import AdminManagement from './pages/AdminManagement'
 import ClassManagement from './pages/ClassManagement'
+import StudentManagement from './pages/StudentManagement'
 
 const getUser = () => authService.getUserData()
 const isLevel3Admin = () => { const u = getUser(); return u?.role === 'admin' && u?.authorization_level >= 3 }
@@ -55,6 +56,12 @@ function App() {
           path="/override"
           element={isAuthenticated
             ? (isAdminRole() ? <ManualOverride /> : <Navigate to="/dashboard" />)
+            : <Navigate to="/signin" />}
+        />
+        <Route
+          path="/students"
+          element={isAuthenticated
+            ? (isLevel2Admin() ? <StudentManagement /> : <Navigate to="/dashboard" />)
             : <Navigate to="/signin" />}
         />
         <Route

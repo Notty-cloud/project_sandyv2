@@ -13,6 +13,7 @@ const Navigation = ({ currentPage }) => {
     { path: '/dashboard',        label: 'Dashboard',        icon: '📊' },
     { path: '/attendance',       label: 'Attendance',       icon: '📋' },
     { path: '/enrollment',       label: 'Enrollment',       icon: '📷', hidden: isTeacher },
+    { path: '/students',         label: 'Students',         icon: '🎓', hidden: !isLevel2Plus },
     { path: '/classes',          label: 'Classes',          icon: '🏫', hidden: !isLevel2Plus },
     { path: '/override',         label: 'Override',         icon: '⚙️', hidden: isTeacher },
     { path: '/admin-management', label: 'Admin Management', icon: '🔑', hidden: !isLevel3 },
