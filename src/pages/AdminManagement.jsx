@@ -46,7 +46,7 @@ const AdminManagement = () => {
   const [createForm, setCreateForm] = useState(EMPTY_FORM)
   const [createLoading, setCreateLoading] = useState(false)
 
-  const [editingId, setEditingId] = useState(null)
+  const [editingAdmin, setEditingAdmin] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [editLoading, setEditLoading] = useState(false)
 
@@ -100,27 +100,39 @@ const AdminManagement = () => {
   }
 
   const startEdit = (admin) => {
-    setEditingId(admin.id)
+    setEditingAdmin(admin)
     setEditForm({
+      email: admin.email,
+      password: '',
+      profile: profileOf(admin).label,
       role: admin.role,
       authorization_level: admin.authorization_level,
       is_active: admin.is_active,
     })
   }
 
-  const handleUpdate = async (id) => {
+  const handleUpdate = async (e) => {
+    e.preventDefault()
     setEditLoading(true)
     setError('')
     try {
-      await adminManagementAPI.updateAdmin(id, {
-        ...editForm,
+      const payload = {
+        email: editForm.email,
+        role: editForm.role,
         authorization_level: Number(editForm.authorization_level),
-      })
+        is_active: editForm.is_active,
+      }
+      if (editForm.password) payload.password = editForm.password
+      await adminManagementAPI.updateAdmin(editingAdmin.id, payload)
       setSuccess('Account updated.')
-      setEditingId(null)
+      setEditingAdmin(null)
       fetchAdmins()
-    } catch {
-      setError('Failed to update account.')
+    } catch (err) {
+      const data = err.response?.data
+      const msg = data
+        ? Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' | ')
+        : 'Failed to update account.'
+      setError(msg)
     } finally {
       setEditLoading(false)
     }
@@ -204,20 +216,9 @@ const AdminManagement = () => {
                           </td>
                           <td className="px-4 py-3 text-gray-600">{admin.email}</td>
 
-                          {/* Role Profile — editable inline */}
+                          {/* Role Profile */}
                           <td className="px-4 py-3">
-                            {editingId === admin.id ? (
-                              <select
-                                value={editForm.profile || profileOf(admin).label}
-                                onChange={(e) => {
-                                  const p = ROLE_PROFILES.find((r) => r.label === e.target.value)
-                                  setEditForm({ ...editForm, profile: e.target.value, role: p.role, authorization_level: p.level })
-                                }}
-                                className="border rounded px-2 py-1 text-sm"
-                              >
-                                {ROLE_PROFILES.map((p) => <option key={p.label} value={p.label}>{p.label}</option>)}
-                              </select>
-                            ) : (() => {
+                            {(() => {
                               const p = profileOf(admin)
                               const colors = { Teacher: 'bg-blue-100 text-blue-800', Coordinator: 'bg-purple-100 text-purple-800', 'Head Teacher': 'bg-red-100 text-red-800' }
                               return (
@@ -229,20 +230,9 @@ const AdminManagement = () => {
                             })()}
                           </td>
 
-                          {/* Active toggle — editable inline */}
+                          {/* Status */}
                           <td className="px-4 py-3">
-                            {editingId === admin.id ? (
-                              <select
-                                value={editForm.is_active ? 'true' : 'false'}
-                                onChange={(e) => setEditForm({ ...editForm, is_active: e.target.value === 'true' })}
-                                className="border rounded px-2 py-1 text-sm"
-                              >
-                                <option value="true">Active</option>
-                                <option value="false">Inactive</option>
-                              </select>
-                            ) : (
-                              <StatusBadge admin={admin} />
-                            )}
+                            <StatusBadge admin={admin} />
                           </td>
 
                           <td className="px-4 py-3 text-gray-500 text-xs">
@@ -254,49 +244,29 @@ const AdminManagement = () => {
                           {/* Actions */}
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              {editingId === admin.id ? (
-                                <>
-                                  <button
-                                    onClick={() => handleUpdate(admin.id)}
-                                    disabled={editLoading}
-                                    className="px-3 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 transition disabled:opacity-50"
-                                  >
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingId(null)}
-                                    className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-xs hover:bg-gray-400 transition"
-                                  >
-                                    Cancel
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  {admin.id !== currentUser?.id && (
-                                    <button
-                                      onClick={() => startEdit(admin)}
-                                      className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 transition"
-                                    >
-                                      Edit
-                                    </button>
-                                  )}
-                                  {admin.is_locked && (
-                                    <button
-                                      onClick={() => handleUnlock(admin)}
-                                      className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded text-xs hover:bg-yellow-200 transition"
-                                    >
-                                      Unlock
-                                    </button>
-                                  )}
-                                  {admin.id !== currentUser?.id && (
-                                    <button
-                                      onClick={() => setConfirmDelete(admin)}
-                                      className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 transition"
-                                    >
-                                      Delete
-                                    </button>
-                                  )}
-                                </>
+                              {admin.id !== currentUser?.id && (
+                                <button
+                                  onClick={() => startEdit(admin)}
+                                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 transition"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              {admin.is_locked && (
+                                <button
+                                  onClick={() => handleUnlock(admin)}
+                                  className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded text-xs hover:bg-yellow-200 transition"
+                                >
+                                  Unlock
+                                </button>
+                              )}
+                              {admin.id !== currentUser?.id && (
+                                <button
+                                  onClick={() => setConfirmDelete(admin)}
+                                  className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 transition"
+                                >
+                                  Delete
+                                </button>
                               )}
                             </div>
                           </td>
@@ -379,6 +349,83 @@ const AdminManagement = () => {
                 <button
                   type="button"
                   onClick={() => { setShowCreateModal(false); setCreateForm(EMPTY_FORM) }}
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition font-semibold text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingAdmin && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Edit Account</h2>
+            <p className="text-sm text-gray-500 mb-4">{editingAdmin.admin_name}</p>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Password
+                  <span className="text-gray-400 font-normal ml-1">(leave blank to keep current)</span>
+                </label>
+                <input
+                  type="password"
+                  value={editForm.password}
+                  onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role Profile</label>
+                <select
+                  value={editForm.profile}
+                  onChange={(e) => {
+                    const p = ROLE_PROFILES.find((r) => r.label === e.target.value)
+                    setEditForm({ ...editForm, profile: e.target.value, role: p.role, authorization_level: p.level })
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {ROLE_PROFILES.map((p) => (
+                    <option key={p.label} value={p.label}>{p.label} — {p.description}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={editForm.is_active ? 'true' : 'false'}
+                  onChange={(e) => setEditForm({ ...editForm, is_active: e.target.value === 'true' })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-semibold text-sm disabled:opacity-50"
+                >
+                  {editLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingAdmin(null)}
                   className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition font-semibold text-sm"
                 >
                   Cancel

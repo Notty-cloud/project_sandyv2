@@ -3,7 +3,21 @@
 
 ---
 
-## Table of Contents
+## 1. Purpose
+
+Project Sandy is a facial recognition-based school attendance system developed as a capstone AI application. The system replaces manual attendance registers with an automated, biometric solution capable of identifying enrolled students via live camera or uploaded photographs, recording attendance in real time, and providing administrative oversight through a web-based interface.
+
+The project serves as a demonstration of applied artificial intelligence within an institutional context, covering the full software development lifecycle from planning through to testing, with deployment to a public-facing environment as a concluding deliverable.
+
+**Objectives:**
+- Design and build a functional AI agent capable of identifying individuals using facial recognition
+- Apply responsible AI principles and data privacy considerations throughout development
+- Demonstrate effective use of an agreed SDLC, version control, and collaborative development practices
+- Deliver a multi-role, multi-tenant web application suitable for real-world adoption
+
+---
+
+## Contents
 
 1. [Purpose](#1-purpose)
 2. [Scope](#2-scope)
@@ -20,20 +34,6 @@
    - 7.6 [Deployment](#76-deployment)
    - 7.7 [Maintenance](#77-maintenance)
 8. [Document Management](#8-document-management)
-
----
-
-## 1. Purpose
-
-Project Sandy is a facial recognition-based school attendance system developed as a capstone AI application. The system replaces manual attendance registers with an automated, biometric solution capable of identifying enrolled students via live camera or uploaded photographs, recording attendance in real time, and providing administrative oversight through a web-based interface.
-
-The project serves as a demonstration of applied artificial intelligence within an institutional context, covering the full software development lifecycle from planning through to testing, with deployment to a public-facing environment as a concluding deliverable.
-
-**Objectives:**
-- Design and build a functional AI agent capable of identifying individuals using facial recognition
-- Apply responsible AI principles and data privacy considerations throughout development
-- Demonstrate effective use of an agreed SDLC, version control, and collaborative development practices
-- Deliver a multi-role, multi-tenant web application suitable for real-world adoption
 
 ---
 

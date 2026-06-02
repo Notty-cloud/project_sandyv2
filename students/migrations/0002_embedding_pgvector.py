@@ -1,19 +1,22 @@
+from django.conf import settings
 from django.db import migrations
-from pgvector.django import HnswIndex, VectorField
+
+_using_postgres = settings.DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql'
+if _using_postgres:
+    from pgvector.django import HnswIndex, VectorField
 
 
 class Migration(migrations.Migration):
     """
     Requires PostgreSQL with the pgvector extension available.
-    Run: CREATE EXTENSION IF NOT EXISTS vector;
-    (this migration does it automatically via RunSQL).
+    Skipped automatically on SQLite — the JSONField embedding stays in place.
     """
 
     dependencies = [
         ('students', '0001_initial'),
     ]
 
-    operations = [
+    operations = [] if not _using_postgres else [
         migrations.RunSQL('CREATE EXTENSION IF NOT EXISTS vector'),
 
         # Convert the JSONField column to a native vector(512) column.

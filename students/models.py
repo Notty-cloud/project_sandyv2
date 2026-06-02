@@ -1,7 +1,15 @@
 import uuid
+from django.conf import settings
 from django.db import models
-from pgvector.django import HnswIndex, VectorField
 from admins.models import Admin
+
+_using_postgres = settings.DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql'
+if _using_postgres:
+    from pgvector.django import HnswIndex, VectorField
+    _embedding_field = VectorField(dimensions=512)
+else:
+    HnswIndex = None
+    _embedding_field = models.JSONField(default=list)
 
 
 class Student(models.Model):
@@ -29,7 +37,7 @@ class Student(models.Model):
 class StudentEmbedding(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='embeddings')
     tenant_id = models.UUIDField()
-    embedding = VectorField(dimensions=512)
+    embedding = _embedding_field
     version = models.IntegerField(default=1)
     quality_score = models.FloatField(null=True, blank=True)
     enrolled_at = models.DateTimeField(auto_now_add=True)
@@ -42,13 +50,13 @@ class StudentEmbedding(models.Model):
         indexes = [
             models.Index(fields=['student'], name='idx_student_embeddings_student'),
             models.Index(fields=['tenant_id'], name='idx_student_embeddings_tenant'),
-            HnswIndex(
+            *([HnswIndex(
                 name='idx_student_embeddings_hnsw',
                 fields=['embedding'],
                 m=16,
                 ef_construction=64,
                 opclasses=['vector_cosine_ops'],
-            ),
+            )] if HnswIndex else []),
         ]
 
     def __str__(self):

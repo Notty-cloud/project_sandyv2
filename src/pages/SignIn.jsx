@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authAPI } from '../services/api'
 import { authService } from '../services/auth'
@@ -21,6 +21,12 @@ const SignIn = ({ onLogin }) => {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    setAdminName('')
+    setPassword('')
+    setError('')
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
