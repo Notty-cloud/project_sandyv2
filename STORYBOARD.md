@@ -1,5 +1,5 @@
 # Project Sandy — Storyboard & Production Package
-**"FR Attendance"** · Total Runtime: ~5:30 · 9 Scenes
+**"FR Attendance"** · Total Runtime: 5:00 · 8 Scenes
 
 ---
 
@@ -74,18 +74,14 @@ And Handle Failed Registrations — jump into Manual Override and fix anything t
 Everything important. In one place. No digging. No confusion. No wasted time.
 One dashboard. Fast decisions. Smooth school operations.
 
-**Scene 8 — The Build (4:30 – 5:00)**
-Sandy didn't appear overnight. It was designed and built from the ground up by a team of six students — as a capstone AI project.
-Using React for the interface, Django for the backend, and DeepFace for the facial recognition engine — every single feature was planned, debated, coded, and tested collaboratively.
-Version-controlled on GitHub. Refined through real testing. Six minds. One shared goal.
-Build something that actually works — for real schools, and real students.
-
-**Scene 9 — The Outro (5:00 – 5:30)**
-And that is Project Sandy — a smarter way to manage attendance, registration, and school safety. By replacing paper registers with facial recognition, Sandy helps teachers save time, reduce mistakes, and keep student records organised.
-As we continue developing the app, our goal is to bring Sandy into schools across Barbados — including Alma Parris, Ellerslie Secondary, and other primary and secondary schools right here at home.
-And with future security features on the way, Sandy will help schools create safer, faster, and more efficient learning environments.
-Because Project Sandy is not just attendance — it is the future of smarter schools.
-Thank you.
+**Scene 8 — The Future (4:30 – 5:00)**
+Sandy was built from scratch — by six students, one team, one shared goal.
+React. Django. DeepFace AI. Months of code, real testing, and genuine collaboration — for classrooms that still run on paper.
+Our mission is to bring Sandy to every school in Barbados. Alma Parris. Ellerslie Secondary. Every student. Every morning.
+Because no student should ever be missed.
+Every face matters.
+Every day counts.
+This is Project Sandy.
 
 ---
 
@@ -219,48 +215,30 @@ Screen recording of the Sandy Dashboard. The three action buttons are highlighte
 
 ---
 
-### Scene 8 — The Build
+### Scene 8 — The Future
 **Duration:** 30 seconds (4:30–5:00)
-**Caption:** Built by students. For schools.
+**Caption:** Every face matters. Every day counts.
 
 **Visual:**
-Quick-cut documentary montage. Shot 1: A group of six young adults (university students, mixed backgrounds) gathered around laptops in a bright study space — screens showing code and the Sandy interface. Collaborative energy — someone pointing at a screen, another typing. Shot 2: Close-up of a laptop showing GitHub — commit history, green contribution graph, branch names. Shot 3: A whiteboard covered in architecture diagrams — React, Django, DeepFace written in marker. Shot 4: The Sandy interface loading on a laptop — the finished product. Each shot is 5–6 seconds. Clean, rhythmic cuts. Warm natural light throughout.
+Opens with a rapid 3-shot montage — the team at laptops (2s), a GitHub commit graph (2s), a whiteboard with React / Django / DeepFace written in marker (2s). Then a hard cut to silence: wide exterior shot of a Caribbean school gate at morning. Students filing in, uniforms, sunlight. The voice-over slows and lands each final line with weight. On the last word — cut to black. White text appears one line at a time, centre screen:
 
-**Camera:** Wide group shot → GitHub screen → whiteboard → finished app on screen.
-
-**Mood:** Behind-the-scenes pride. Real people. A real project. Earned — not bought.
-
-**Caption sequence:**
-- "Six students. One shared goal."
-- "React. Django. DeepFace AI."
-- "Designed, built, and tested — from scratch."
-- "Built by students. For schools."
-
----
-
-### Scene 9 — The Outro
-**Duration:** 30 seconds (5:00–5:30)
-**Caption:** The future of smarter schools.
-
-**Visual:**
-Slow fade from black. Wide exterior shot of a school — students arriving through the gate in the morning light, uniforms, movement, life. Voice-over plays over the image, calm and final. Gentle fade to black. White text appears on black screen, one line at a time:
-
-*"Project Sandy"*
-*"FR Attendance"*
-*"The future of smarter schools."*
+*"Every face matters."*
+*"Every day counts."*
+*"This is Project Sandy."*
 
 Smaller text below: *Alma Parris School · Ellerslie Secondary · Barbados*
 
-Hold 3 seconds. Fade out.
+Hold 3 seconds. Fade out completely.
 
-**Camera:** Exterior wide → fade to black → title card.
+**Camera:** Fast montage (team / GitHub / whiteboard) → hard cut to school gate wide → slow push in → cut to black → title cards.
 
-**Mood:** Hopeful, proud, conclusive.
+**Mood:** Pride, purpose, inevitability. The audience feels this was earned — and that it is just beginning.
 
 **Caption sequence:**
-- "Safer. Faster. Smarter."
-- "Project Sandy."
-- "The future of smarter schools."
+- "Six students. One team. One goal."
+- "React. Django. DeepFace AI."
+- "Every face matters. Every day counts."
+- "This is Project Sandy."
 
 ---
 
@@ -275,25 +253,24 @@ Hold 3 seconds. Fade out.
 | 5 | Students Enrolled | 2:40–3:15 | 35s | Live database, always organised |
 | 6 | Manual Override | 3:15–3:55 | 40s | Human control when AI needs help |
 | 7 | The Dashboard | 3:55–4:30 | 35s | Command centre — everything in one place |
-| 8 | The Build | 4:30–5:00 | 30s | The team and technology behind Sandy |
-| 9 | The Outro | 5:00–5:30 | 30s | Vision for Barbados schools |
-| | **Total** | | **5:30** | |
+| 8 | The Future | 4:30–5:00 | 30s | The team, the vision, the closing statement |
+| | **Total** | | **5:00** | |
 
 ---
 
 ## ElevenLabs Voice Settings
 
-**Scenes 1–7 and Scene 8:**
+**Scenes 1–7:**
 - Speed: 0.93
 - Stability: 62%
 - Similarity: 78%
 - Style: 25%
 
-**Scene 9 — Outro (slightly slower and calmer):**
-- Speed: 0.91
-- Stability: 65%
+**Scene 8 — The Future (slower and weighted for impact):**
+- Speed: 0.89
+- Stability: 68%
 - Similarity: 78%
-- Style: 28%
+- Style: 30%
 
 ---
 
@@ -319,5 +296,5 @@ Hold 3 seconds. Fade out.
 
 ---
 
-*Project Sandy — Storyboard & Production Package v2.0*
-*Updated to include development scene — 9 scenes, 5:30 runtime*
+*Project Sandy — Storyboard & Production Package v3.0*
+*8 scenes, exactly 5:00 runtime — development scene merged into closing*
