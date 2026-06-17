@@ -76,6 +76,12 @@ class StudentViewSet(viewsets.ModelViewSet):
         embedding = face_data['embedding']
         quality_score = face_data['quality_score']
 
+        if quality_score < 0.1:
+            return Response(
+                {'image': 'Face detected but confidence too low. Use better lighting and face the camera directly.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # ── Save embedding ────────────────────────────────────────────────
         from admins.models import Admin
         try:
@@ -168,6 +174,12 @@ class StudentViewSet(viewsets.ModelViewSet):
             return Response({'error': f'Face processing failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         query_embedding = face_data['embedding']
+
+        if face_data['quality_score'] < 0.1:
+            return Response(
+                {'error': 'Face detected but confidence too low. Use better lighting and face the camera directly.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         active_embeddings = StudentEmbedding.objects.filter(
             tenant_id=tenant_id,

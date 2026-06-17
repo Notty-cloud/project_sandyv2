@@ -67,7 +67,6 @@ def extract_embedding(image_file):
     results = None
 
     try:
-        # Pass 1 — try each detector with face detection enforced
         for detector in DETECTORS:
             try:
                 results = DeepFace.represent(
@@ -80,24 +79,13 @@ def extract_embedding(image_file):
                 break
             except Exception:
                 continue
-
-        # Pass 2 — fallback: skip detection, embed the full image.
-        # Quality score will be 0; cosine similarity still works for POC.
-        if results is None:
-            results = DeepFace.represent(
-                img_path=tmp_path,
-                model_name=MODEL_NAME,
-                detector_backend='opencv',
-                enforce_detection=False,
-                align=False,
-            )
     finally:
         os.unlink(tmp_path)
 
     if not results:
         raise ValueError(
-            'Could not process the image. '
-            'Please ensure good lighting, face the camera directly, and avoid obstructions.'
+            'No face detected. Please ensure good lighting, face the camera directly, '
+            'and avoid obstructions. The photo must contain a clear, visible face.'
         )
 
     # Use the highest-confidence face if multiple are detected
