@@ -9,10 +9,11 @@ const axiosInstance = axios.create({
   },
 });
 
-// Add token to requests if available
+// Add token to requests if available (skip auth endpoints — stale tokens block login)
 axiosInstance.interceptors.request.use((config) => {
+  const isAuthEndpoint = config.url?.includes('/auth/login');
   const token = localStorage.getItem('authToken');
-  if (token) {
+  if (token && !isAuthEndpoint) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;

@@ -4,10 +4,9 @@ import { authAPI } from '../services/api'
 import { authService } from '../services/auth'
 
 const DEMO_USERS = [
-  { username: 'admin',        password: 'Admin@sandy1',  role: 'Head Teacher',  badge: 'bg-purple-100 text-purple-700' },
-  { username: 'coordinator1', password: 'Coord@sandy1',  role: 'Coordinator',   badge: 'bg-blue-100 text-blue-700'   },
-  { username: 'teacher1',     password: 'Teach@sandy1',  role: 'Teacher',       badge: 'bg-green-100 text-green-700' },
-  { username: 'teacher2',     password: 'Teach2@sandy1', role: 'Teacher',       badge: 'bg-green-100 text-green-700' },
+  { username: 'admin',        password: 'Admin@sandy1', role: 'Head Teacher', badge: 'bg-purple-100 text-purple-700' },
+  { username: 'coordinator',  password: 'Coord@sandy1', role: 'Coordinator',  badge: 'bg-blue-100 text-blue-700'   },
+  { username: 'teacher',      password: 'Teach@sandy1', role: 'Teacher',      badge: 'bg-green-100 text-green-700' },
 ]
 
 const ERROR_MESSAGES = {
@@ -23,6 +22,7 @@ const SignIn = ({ onLogin }) => {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    authService.logout()
     setAdminName('')
     setPassword('')
     setError('')
