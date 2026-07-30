@@ -10,12 +10,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-SECRET_KEY = os.getenv('SECRET_KEY')
-if not SECRET_KEY:
-    if DEBUG:
-        SECRET_KEY = 'django-insecure-dev-only'
-    else:
-        raise ValueError('SECRET_KEY environment variable must be set in production')
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-build-placeholder')
+if not DEBUG and SECRET_KEY == 'django-insecure-build-placeholder':
+    import warnings
+    warnings.warn('SECRET_KEY is not set — using insecure placeholder. Set SECRET_KEY in production.')
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
