@@ -32,14 +32,9 @@ COPY . .
 # React production build from stage 1
 COPY --from=frontend /build/dist ./dist
 
+# Normalise CRLF (the repo is developed on Windows) and make executable
+RUN sed -i 's/\r$//' start.sh && chmod +x start.sh
+
 EXPOSE 8000
 
-CMD python manage.py collectstatic --noinput && \
-    python manage.py migrate --noinput && \
-    gunicorn config.wsgi:application \
-        --bind 0.0.0.0:${PORT:-8000} \
-        --workers 1 \
-        --threads 4 \
-        --timeout 180 \
-        --access-logfile - \
-        --error-logfile -
+CMD ["./start.sh"]
