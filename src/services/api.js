@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+// VITE_* values are inlined at build time. In the container image the frontend
+// is built without one, so production must fall back to a same-origin relative
+// path — Django serves the SPA and the API from the same host. An absolute
+// localhost default would send deployed users' browsers to their own machines.
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? 'http://localhost:3000/api' : '/api');
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
