@@ -12,7 +12,13 @@ def spa_index(request):
     return JsonResponse({'detail': 'Frontend not built. Run: npm run build'}, status=404)
 
 
+def health(request):
+    """Unauthenticated liveness probe for the platform healthcheck."""
+    return JsonResponse({'status': 'ok'})
+
+
 urlpatterns = [
+    path('health/', health),
     path('favicon.ico', lambda r: JsonResponse({}, status=204)),
     path('api/', include('admins.urls')),
     path('api/', include('students.urls')),

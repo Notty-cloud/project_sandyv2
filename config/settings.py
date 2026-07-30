@@ -15,7 +15,21 @@ if not DEBUG and SECRET_KEY == 'django-insecure-build-placeholder':
     import warnings
     warnings.warn('SECRET_KEY is not set — using insecure placeholder. Set SECRET_KEY in production.')
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
+
+# Railway injects its own domains; healthcheck probes hit the service on an
+# internal host, so trust the platform-provided names as well.
+for _var in ('RAILWAY_PUBLIC_DOMAIN', 'RAILWAY_PRIVATE_DOMAIN', 'RAILWAY_STATIC_URL'):
+    _domain = os.getenv(_var, '').replace('https://', '').replace('http://', '').strip('/')
+    if _domain and _domain not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_domain)
+
+if os.getenv('RAILWAY_ENVIRONMENT'):
+    ALLOWED_HOSTS.extend(['.railway.app', '.railway.internal', 'healthcheck.railway.app'])
+    CSRF_TRUSTED_ORIGINS = [
+        f"https://{h.lstrip('.')}" for h in ALLOWED_HOSTS if not h.startswith('.')
+    ]
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INSTALLED_APPS = [
     'django.contrib.contenttypes',
