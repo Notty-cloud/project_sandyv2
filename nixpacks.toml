@@ -1,3 +1,12 @@
+[phases.setup]
+nixPkgs = ["python312", "uv"]
+
+[phases.install]
+cmds = [
+  "uv pip install -r requirements.txt --system",
+  "npm ci"
+]
+
 [phases.build]
 cmds = [
   "npm run build",
