@@ -1,0 +1,23 @@
+.git
+.gitignore
+node_modules
+dist
+staticfiles
+venv
+__pycache__
+*.pyc
+*.pyo
+.env
+.env.*
+!.env.example
+db.sqlite3
+*.sqlite3
+.vscode
+.idea
+.claude
+*.md
+*.docx
+ai_engine/models/*.onnx
+New folder
+* - Copy*
+*.log
