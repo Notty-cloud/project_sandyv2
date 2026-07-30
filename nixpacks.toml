@@ -3,15 +3,16 @@ nixPkgs = ["python312", "uv"]
 
 [phases.install]
 cmds = [
-  "uv pip install -r requirements.txt --system",
+  "uv venv /app/.venv",
+  "uv pip install -r requirements.txt --python /app/.venv",
   "npm ci"
 ]
 
 [phases.build]
 cmds = [
   "npm run build",
-  "python3 manage.py collectstatic --noinput"
+  "/app/.venv/bin/python manage.py collectstatic --noinput"
 ]
 
 [start]
-cmd = "python3 manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+cmd = "/app/.venv/bin/python manage.py migrate && /app/.venv/bin/gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
