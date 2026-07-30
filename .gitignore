@@ -35,3 +35,7 @@ ai_engine/models/*.onnx
 
 # Production build artefacts (Railway builds these from source)
 staticfiles/
+
+# Windows "- Copy" duplicates
+*" - Copy"*
+*" - Copy."*
