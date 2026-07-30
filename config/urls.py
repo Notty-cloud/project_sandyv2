@@ -1,13 +1,18 @@
-from django.urls import path, include
-from django.http import JsonResponse
+from django.urls import path, include, re_path
+from django.http import JsonResponse, FileResponse
+from django.conf import settings
+from pathlib import Path
 
 
-def api_root(request):
-    return JsonResponse({'detail': 'API server. Frontend is at http://localhost:5173.'})
+def spa_index(request):
+    """Serve the React SPA for any non-API route (handles client-side routing)."""
+    index = Path(settings.BASE_DIR) / 'dist' / 'index.html'
+    if index.exists():
+        return FileResponse(open(index, 'rb'), content_type='text/html')
+    return JsonResponse({'detail': 'Frontend not built. Run: npm run build'}, status=404)
 
 
 urlpatterns = [
-    path('', api_root),
     path('favicon.ico', lambda r: JsonResponse({}, status=204)),
     path('api/', include('admins.urls')),
     path('api/', include('students.urls')),
@@ -19,4 +24,6 @@ urlpatterns = [
     path('api/v1/', include('classes.urls')),
     path('api/v1/', include('enrollments.urls')),
     path('api/v1/', include('attendance.urls')),
+    # Catch-all: serve React SPA for any non-API path
+    re_path(r'^(?!api/).*$', spa_index),
 ]

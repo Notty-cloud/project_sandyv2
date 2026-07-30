@@ -74,11 +74,11 @@ And Handle Failed Registrations — jump into Manual Override and fix anything t
 Everything important. In one place. No digging. No confusion. No wasted time.
 One dashboard. Fast decisions. Smooth school operations.
 
-**Scene 8 — The Future (4:30 – 5:00)**
-Sandy was built from scratch — by six students, one team, one shared goal.
-React. Django. DeepFace AI. Months of code, real testing, and genuine collaboration — for classrooms that still run on paper.
-Our mission is to bring Sandy to every school in Barbados. Alma Parris. Ellerslie Secondary. Every student. Every morning.
-Because no student should ever be missed.
+**Scene 8 — For Sandy (4:30 – 5:00)**
+This app carries a name.
+Sandy.
+Not just a project name — a person. Sandy Samuels worked at these schools. She saw the gaps. She brought the idea to our team, and shared her vision with us — just days before she passed away.
+We built this for her. For every student she believed deserved to be seen, every morning, without fail.
 Every face matters.
 Every day counts.
 This is Project Sandy.
@@ -215,28 +215,39 @@ Screen recording of the Sandy Dashboard. The three action buttons are highlighte
 
 ---
 
-### Scene 8 — The Future
+### Scene 8 — For Sandy
 **Duration:** 30 seconds (4:30–5:00)
-**Caption:** Every face matters. Every day counts.
+**Caption:** This is Project Sandy.
 
 **Visual:**
-Opens with a rapid 3-shot montage — the team at laptops (2s), a GitHub commit graph (2s), a whiteboard with React / Django / DeepFace written in marker (2s). Then a hard cut to silence: wide exterior shot of a Caribbean school gate at morning. Students filing in, uniforms, sunlight. The voice-over slows and lands each final line with weight. On the last word — cut to black. White text appears one line at a time, centre screen:
+Hard cut from the dashboard to black. Silence for one beat.
+
+Then: a single still image or soft-focus photograph — a school corridor, an empty classroom desk, morning light through a window. Something quiet and human. The narrator's voice is slower now, deliberate, like a dedication.
+
+On the word *"Sandy"* — the name appears on screen alone. White text. Black background. One word. Hold it for two seconds before the voice continues.
+
+As the narration closes, cut to: wide exterior of a school gate, students arriving in the early morning. Uniforms. Movement. Life. The scene Sandy saw every day.
+
+Final cut to black. White text appears one line at a time:
 
 *"Every face matters."*
 *"Every day counts."*
 *"This is Project Sandy."*
 
-Smaller text below: *Alma Parris School · Ellerslie Secondary · Barbados*
+Smaller text below: *In memory of Sandy Samuels*
 
-Hold 3 seconds. Fade out completely.
+Hold 4 seconds. Fade out.
 
-**Camera:** Fast montage (team / GitHub / whiteboard) → hard cut to school gate wide → slow push in → cut to black → title cards.
+**Camera:** Cut to black → still image (corridor/desk) → name card "Sandy" → school gate exterior → final title cards.
 
-**Mood:** Pride, purpose, inevitability. The audience feels this was earned — and that it is just beginning.
+**Mood:** Still. Earned. The audience realises the name they have been hearing for five minutes belongs to a real person. The app is not a product — it is a promise kept.
+
+**Narration direction:** Pause fully after *"Sandy."* — let it sit. Do not rush the tribute lines. The three closing lines (*Every face matters. Every day counts. This is Project Sandy.*) should each land on their own breath.
 
 **Caption sequence:**
-- "Six students. One team. One goal."
-- "React. Django. DeepFace AI."
+- "Sandy Samuels — she saw the need."
+- "She shared the vision. Days later, she was gone."
+- "We built this for her."
 - "Every face matters. Every day counts."
 - "This is Project Sandy."
 
@@ -253,7 +264,7 @@ Hold 3 seconds. Fade out completely.
 | 5 | Students Enrolled | 2:40–3:15 | 35s | Live database, always organised |
 | 6 | Manual Override | 3:15–3:55 | 40s | Human control when AI needs help |
 | 7 | The Dashboard | 3:55–4:30 | 35s | Command centre — everything in one place |
-| 8 | The Future | 4:30–5:00 | 30s | The team, the vision, the closing statement |
+| 8 | For Sandy | 4:30–5:00 | 30s | The person behind the name — tribute and close |
 | | **Total** | | **5:00** | |
 
 ---
@@ -266,11 +277,11 @@ Hold 3 seconds. Fade out completely.
 - Similarity: 78%
 - Style: 25%
 
-**Scene 8 — The Future (slower and weighted for impact):**
-- Speed: 0.89
-- Stability: 68%
+**Scene 8 — For Sandy (slow, measured, tribute delivery):**
+- Speed: 0.87
+- Stability: 72%
 - Similarity: 78%
-- Style: 30%
+- Style: 32%
 
 ---
 
@@ -296,5 +307,5 @@ Hold 3 seconds. Fade out completely.
 
 ---
 
-*Project Sandy — Storyboard & Production Package v3.0*
-*8 scenes, exactly 5:00 runtime — development scene merged into closing*
+*Project Sandy — Storyboard & Production Package v4.0*
+*8 scenes, exactly 5:00 runtime — dedicated to Sandy Samuels*

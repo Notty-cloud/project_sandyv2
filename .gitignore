@@ -32,3 +32,6 @@ Thumbs.db
 
 # ML model files (too large for GitHub)
 ai_engine/models/*.onnx
+
+# Production build artefacts (Railway builds these from source)
+staticfiles/
