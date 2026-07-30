@@ -24,10 +24,17 @@ for _var in ('RAILWAY_PUBLIC_DOMAIN', 'RAILWAY_PRIVATE_DOMAIN', 'RAILWAY_STATIC_
     if _domain and _domain not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(_domain)
 
-if os.getenv('RAILWAY_ENVIRONMENT'):
-    ALLOWED_HOSTS.extend(['.railway.app', '.railway.internal', 'healthcheck.railway.app'])
+# Match any RAILWAY_* var — the specific names differ across platform versions
+# (RAILWAY_ENVIRONMENT vs RAILWAY_ENVIRONMENT_NAME), so don't depend on one.
+ON_RAILWAY = any(k.startswith('RAILWAY_') for k in os.environ)
+
+if ON_RAILWAY:
+    # Railway terminates TLS and probes the container on an internal hostname
+    # that is not knowable ahead of time; the platform only routes this
+    # project's own traffic here, so host validation adds nothing.
+    ALLOWED_HOSTS = ['*']
     CSRF_TRUSTED_ORIGINS = [
-        f"https://{h.lstrip('.')}" for h in ALLOWED_HOSTS if not h.startswith('.')
+        f'https://{d}' for d in (os.getenv('RAILWAY_PUBLIC_DOMAIN', ''),) if d
     ]
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 

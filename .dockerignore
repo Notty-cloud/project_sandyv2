@@ -19,5 +19,6 @@ db.sqlite3
 *.docx
 ai_engine/models/*.onnx
 New folder
-* - Copy*
+**/* - Copy*
+**/*- Copy*
 *.log
