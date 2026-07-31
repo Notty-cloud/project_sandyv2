@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from admins.permissions import RoleLevelPermission
+from admins.tenancy import request_tenant_id, scope_to_tenant
 from .models import Enrollment
 from .serializers import EnrollmentSerializer
 
@@ -13,7 +14,7 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     minimum_authorization_level = 1
     serializer_class = EnrollmentSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['tenant_id', 'student', 'academic_year', 'status', 'embedding_generated']
+    filterset_fields = ['student', 'academic_year', 'status', 'embedding_generated']
     search_fields = ['student__name', 'student__student_id']
 
     def get_permissions(self):
@@ -24,11 +25,10 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = Enrollment.objects.select_related('student', 'enrolled_by').all()
-
-        tenant_id = self.request.query_params.get('tenant_id')
-        if tenant_id:
-            qs = qs.filter(tenant_id=tenant_id)
+        qs = scope_to_tenant(
+            Enrollment.objects.select_related('student', 'enrolled_by').all(),
+            self.request,
+        )
 
         # Teachers only see enrollments for students in their assigned classes
         if user.role == 'teacher':
@@ -43,7 +43,10 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(enrolled_by=self.request.user)
+        serializer.save(
+            enrolled_by=self.request.user,
+            tenant_id=request_tenant_id(self.request),
+        )
 
 
 class EnrollmentCreateView(APIView):
@@ -54,5 +57,8 @@ class EnrollmentCreateView(APIView):
     def post(self, request):
         serializer = EnrollmentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        enrollment = serializer.save(enrolled_by=request.user)
+        enrollment = serializer.save(
+            enrolled_by=request.user,
+            tenant_id=request_tenant_id(request),
+        )
         return Response(EnrollmentSerializer(enrollment).data, status=status.HTTP_201_CREATED)

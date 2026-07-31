@@ -5,25 +5,20 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
 from admins.permissions import RoleLevelPermission
+from admins.tenancy import TenantScopedMixin, request_tenant_id, scope_to_tenant
 from .models import Student, StudentEmbedding
 from .serializers import StudentSerializer, StudentDetailSerializer, StudentEmbeddingSerializer
 from .face import extract_embedding, extract_all_embeddings, cosine_similarity
 
 
-class StudentViewSet(viewsets.ModelViewSet):
+class StudentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     permission_classes = [RoleLevelPermission]
     required_roles = ('teacher', 'admin')
     minimum_authorization_level = 1
+    queryset = Student.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['tenant_id', 'grade', 'section', 'is_active']
+    filterset_fields = ['grade', 'section', 'is_active']
     search_fields = ['name', 'student_id']
-
-    def get_queryset(self):
-        tenant_id = self.request.query_params.get('tenant_id')
-        qs = Student.objects.all()
-        if tenant_id:
-            qs = qs.filter(tenant_id=tenant_id)
-        return qs
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -85,7 +80,8 @@ class StudentViewSet(viewsets.ModelViewSet):
         # ── Save embedding ────────────────────────────────────────────────
         from admins.models import Admin
         try:
-            enrolled_by = Admin.objects.get(id=enrolled_by_id)
+            # Scoped: an account from another tenant must not be recordable here.
+            enrolled_by = scope_to_tenant(Admin.objects.all(), request).get(id=enrolled_by_id)
         except Admin.DoesNotExist:
             return Response({'enrolled_by': 'Admin not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -146,12 +142,15 @@ class StudentViewSet(viewsets.ModelViewSet):
         """
         Identify a student from a face photo.
 
+        The tenant is taken from the authenticated account — a tenant_id in the
+        request body is ignored, so a caller cannot match faces against another
+        school's enrolled students.
+
         Form fields:
           image      (file)   — face photo
-          tenant_id  (string) — required
           threshold  (float)  — match threshold, default 0.65
         """
-        tenant_id = request.data.get('tenant_id')
+        tenant_id = request_tenant_id(request)
         image_file = request.FILES.get('image')
 
         try:
@@ -160,8 +159,6 @@ class StudentViewSet(viewsets.ModelViewSet):
         except (ValueError, AssertionError):
             return Response({'threshold': 'Must be a number between 0.0 and 1.0.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not tenant_id:
-            return Response({'error': 'tenant_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
         if not image_file:
             return Response({'error': 'image is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -218,12 +215,14 @@ class StudentViewSet(viewsets.ModelViewSet):
         POST /api/v1/students/identify-group/
         Detect every face in a group photo and return the best DB match for each.
 
+        The tenant is taken from the authenticated account; a tenant_id in the
+        request body is ignored.
+
         Form fields:
           image      (file)   — photo containing one or more faces
-          tenant_id  (string) — required
           threshold  (float)  — match threshold, default 0.65
         """
-        tenant_id = request.data.get('tenant_id')
+        tenant_id = request_tenant_id(request)
         image_file = request.FILES.get('image')
 
         try:
@@ -232,8 +231,6 @@ class StudentViewSet(viewsets.ModelViewSet):
         except (ValueError, AssertionError):
             return Response({'threshold': 'Must be a number between 0.0 and 1.0.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not tenant_id:
-            return Response({'error': 'tenant_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
         if not image_file:
             return Response({'error': 'image is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -269,17 +266,11 @@ class StudentViewSet(viewsets.ModelViewSet):
         return Response({'face_count': len(faces), 'results': results}, status=status.HTTP_200_OK)
 
 
-class StudentEmbeddingViewSet(viewsets.ModelViewSet):
+class StudentEmbeddingViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     permission_classes = [RoleLevelPermission]
     required_roles = ('teacher', 'admin')
     minimum_authorization_level = 1
     serializer_class = StudentEmbeddingSerializer
+    queryset = StudentEmbedding.objects.all()
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['tenant_id', 'student', 'is_active']
-
-    def get_queryset(self):
-        tenant_id = self.request.query_params.get('tenant_id')
-        qs = StudentEmbedding.objects.all()
-        if tenant_id:
-            qs = qs.filter(tenant_id=tenant_id)
-        return qs
+    filterset_fields = ['student', 'is_active']

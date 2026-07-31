@@ -6,15 +6,16 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
 from admins.permissions import RoleLevelPermission
+from admins.tenancy import request_tenant_id, scope_to_tenant
 from .models import StudentAttendance
 from .serializers import AttendanceSerializer, AttendanceOverrideSerializer
 
 
 def attendance_queryset_for_request(request):
-    tenant_id = request.query_params.get('tenant_id') or request.data.get('tenant_id')
-    queryset = StudentAttendance.objects.select_related('student', 'class_ref', 'overridden_by').all()
-    if tenant_id:
-        queryset = queryset.filter(tenant_id=tenant_id)
+    queryset = scope_to_tenant(
+        StudentAttendance.objects.select_related('student', 'class_ref', 'overridden_by').all(),
+        request,
+    )
 
     if getattr(request.user, 'role', None) == 'teacher':
         queryset = queryset.filter(class_ref__teacher=request.user)
@@ -28,12 +29,15 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     minimum_authorization_level = 1
     serializer_class = AttendanceSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['tenant_id', 'student', 'class_ref', 'date', 'status', 'is_manual_override']
+    filterset_fields = ['student', 'class_ref', 'date', 'status', 'is_manual_override']
     ordering_fields = ['date', 'created_at']
     ordering = ['-date']
 
     def get_queryset(self):
         return attendance_queryset_for_request(self.request)
+
+    def perform_create(self, serializer):
+        serializer.save(tenant_id=request_tenant_id(self.request))
 
     @action(detail=True, methods=['patch'], url_path='override')
     def override(self, request, pk=None):
@@ -59,9 +63,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
         Identify a student from a face photo and mark their attendance.
 
+        The tenant comes from the authenticated account; a tenant_id in the
+        request body is ignored, so attendance cannot be marked against another
+        school's students or classes.
+
         Form fields:
           image       (file)   — face photo from camera
-          tenant_id   (string) — required
           class_id    (int)    — required
           date        (string) — YYYY-MM-DD, defaults to today
           threshold   (float)  — match confidence threshold, default 0.65
@@ -72,7 +79,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         from students.face import extract_embedding
         from django.utils import timezone
 
-        tenant_id = request.data.get('tenant_id')
+        tenant_id = request_tenant_id(request)
         class_id = request.data.get('class_id')
         image_file = request.FILES.get('image')
         location = request.data.get('location', '')
@@ -92,7 +99,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
         # ── Validation ────────────────────────────────────────────────────
         errors = {}
-        if not tenant_id: errors['tenant_id'] = 'Required.'
         if not class_id:  errors['class_id'] = 'Required.'
         if not image_file:
             errors['image'] = 'Required.'

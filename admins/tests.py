@@ -34,7 +34,7 @@ class AuthenticationFlowTests(TestCase):
 
 	def test_login_returns_access_token_and_admin_claims(self):
 		response = self.client.post(
-			'/api/auth/login',
+			'/api/auth/login/',
 			{'admin_name': 'samuel', 'password': 'SecurePass1!'},
 			format='json',
 		)
@@ -47,7 +47,7 @@ class AuthenticationFlowTests(TestCase):
 	def test_failed_logins_lock_account_after_threshold(self):
 		for _ in range(5):
 			response = self.client.post(
-				'/api/auth/login',
+				'/api/auth/login/',
 				{'admin_name': 'samuel', 'password': 'WrongPass1!'},
 				format='json',
 			)
@@ -59,30 +59,30 @@ class AuthenticationFlowTests(TestCase):
 
 	def test_logout_blacklists_current_token(self):
 		login_response = self.client.post(
-			'/api/auth/login',
+			'/api/auth/login/',
 			{'admin_name': 'samuel', 'password': 'SecurePass1!'},
 			format='json',
 		)
 		token = login_response.data['access_token']
 
 		self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-		logout_response = self.client.post('/api/auth/logout', {}, format='json')
+		logout_response = self.client.post('/api/auth/logout/', {}, format='json')
 
 		self.assertEqual(logout_response.status_code, 200)
 		self.assertEqual(TokenBlacklist.objects.count(), 1)
 
-		denied_response = self.client.get('/api/admin')
+		denied_response = self.client.get('/api/admin/')
 		self.assertEqual(denied_response.status_code, 403)
 
 	def test_teacher_cannot_access_level_three_admin_route(self):
 		login_response = self.client.post(
-			'/api/auth/login',
+			'/api/auth/login/',
 			{'admin_name': 'teacher.jane', 'password': 'TeacherPass1!'},
 			format='json',
 		)
 		token = login_response.data['access_token']
 
 		self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-		response = self.client.get('/api/admin')
+		response = self.client.get('/api/admin/')
 
 		self.assertEqual(response.status_code, 403)

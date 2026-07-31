@@ -17,6 +17,7 @@ from django.core.cache import cache
 from .models import Admin, AuthAuditLog, TokenBlacklist
 from .permissions import RoleLevelPermission
 from .serializers import AdminCreateSerializer, AdminSerializer, ChangePasswordSerializer, LoginSerializer
+from .tenancy import TenantScopedMixin, request_tenant_id, scope_to_tenant
 
 
 def get_client_ip(request):
@@ -162,16 +163,14 @@ class AdminManagementView(APIView):
     minimum_authorization_level = 3
 
     def get(self, request):
-        queryset = Admin.objects.all().order_by('admin_name')
-        tenant_id = request.query_params.get('tenant_id')
-        if tenant_id:
-            queryset = queryset.filter(tenant_id=tenant_id)
+        queryset = scope_to_tenant(Admin.objects.all(), request).order_by('admin_name')
         return Response(AdminSerializer(queryset, many=True).data, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = AdminCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        admin = serializer.save()
+        # New accounts always belong to the creator's tenant, whatever was posted.
+        admin = serializer.save(tenant_id=request_tenant_id(request))
         return Response(AdminSerializer(admin).data, status=status.HTTP_201_CREATED)
 
 
@@ -182,7 +181,7 @@ class AdminUnlockView(APIView):
 
     def post(self, request, admin_id):
         try:
-            admin = Admin.objects.get(id=admin_id)
+            admin = scope_to_tenant(Admin.objects.all(), request).get(id=admin_id)
         except Admin.DoesNotExist:
             return Response({'detail': 'Admin account not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -199,20 +198,14 @@ class AdminUnlockView(APIView):
         return Response(AdminSerializer(admin).data, status=status.HTTP_200_OK)
 
 
-class AdminViewSet(viewsets.ModelViewSet):
+class AdminViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     permission_classes = [RoleLevelPermission]
     required_roles = ('admin',)
     minimum_authorization_level = 3
+    queryset = Admin.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['tenant_id', 'role', 'is_active']
+    filterset_fields = ['role', 'is_active']
     search_fields = ['admin_name', 'email']
-
-    def get_queryset(self):
-        tenant_id = self.request.query_params.get('tenant_id')
-        queryset = Admin.objects.all()
-        if tenant_id:
-            queryset = queryset.filter(tenant_id=tenant_id)
-        return queryset
 
     def get_serializer_class(self):
         if self.action == 'create':
