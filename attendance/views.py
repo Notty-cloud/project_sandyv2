@@ -74,9 +74,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
           threshold   (float)  — match confidence threshold, default 0.65
           location    (string) — camera/location label, optional
         """
-        from pgvector.django import CosineDistance
         from students.models import StudentEmbedding
         from students.face import extract_embedding
+        from students.matching import best_match
         from django.utils import timezone
 
         tenant_id = request_tenant_id(request)
@@ -119,21 +119,17 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         query_embedding = face_data['embedding']
         face_confidence = face_data['quality_score']
 
-        # ── Find best matching student via pgvector nearest-neighbor ─────
-        best_emb = (
+        # ── Find best matching student (HNSW-indexed on PostgreSQL) ──────
+        best_emb, best_score = best_match(
             StudentEmbedding.objects
             .filter(tenant_id=tenant_id, is_active=True)
-            .annotate(distance=CosineDistance('embedding', query_embedding))
-            .order_by('distance')
-            .select_related('student')
-            .first()
+            .select_related('student'),
+            query_embedding,
         )
 
         if best_emb is None:
             return Response({'error': 'No enrolled students found.', 'match': None},
                             status=status.HTTP_404_NOT_FOUND)
-
-        best_score = 1.0 - float(best_emb.distance)
 
         if best_score < threshold:
             return Response({

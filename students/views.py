@@ -8,7 +8,8 @@ from admins.permissions import RoleLevelPermission
 from admins.tenancy import TenantScopedMixin, request_tenant_id, scope_to_tenant
 from .models import Student, StudentEmbedding
 from .serializers import StudentSerializer, StudentDetailSerializer, StudentEmbeddingSerializer
-from .face import extract_embedding, extract_all_embeddings, cosine_similarity
+from .face import extract_embedding, extract_all_embeddings
+from .matching import best_match
 
 
 class StudentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
@@ -183,19 +184,13 @@ class StudentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             is_active=True,
         ).select_related('student')
 
-        if not active_embeddings.exists():
+        # Pushed into the database on PostgreSQL so the HNSW index is used.
+        best_embedding, best_score = best_match(active_embeddings, query_embedding)
+
+        if best_embedding is None:
             return Response({'match': None, 'message': 'No enrolled students found for this tenant.'}, status=status.HTTP_404_NOT_FOUND)
 
-        best_score = -1
-        best_embedding = None
-
-        for emb in active_embeddings:
-            score = cosine_similarity(query_embedding, emb.embedding)
-            if score > best_score:
-                best_score = score
-                best_embedding = emb
-
-        if best_score >= threshold and best_embedding:
+        if best_score >= threshold:
             return Response({
                 'match': StudentSerializer(best_embedding.student).data,
                 'confidence': round(best_score, 4),
@@ -241,19 +236,14 @@ class StudentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': f'Face processing failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        active_embeddings = list(
-            StudentEmbedding.objects.filter(tenant_id=tenant_id, is_active=True).select_related('student')
-        )
+        active_embeddings = StudentEmbedding.objects.filter(
+            tenant_id=tenant_id, is_active=True
+        ).select_related('student')
 
         results = []
         for face in faces:
-            best_score = -1.0
-            best_emb = None
-            for emb in active_embeddings:
-                score = cosine_similarity(face['embedding'], emb.embedding)
-                if score > best_score:
-                    best_score = score
-                    best_emb = emb
+            # One indexed nearest-neighbour query per detected face.
+            best_emb, best_score = best_match(active_embeddings, face['embedding'])
 
             results.append({
                 'face_index': face['face_index'],
