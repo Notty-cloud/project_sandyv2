@@ -10,11 +10,29 @@ The rest of the system (enrollment, identification, cosine similarity)
 requires exactly 512 dimensions — update the DB schema if you change this.
 """
 import io
+import logging
 import os
 import sys
 import tempfile
 
 import numpy as np
+
+# Quieten TensorFlow's startup logging. It emits several INFO/WARNING lines per
+# process — no GPU present, oneDNN enabled, CPU instruction sets — which are
+# purely informational but bury real errors in deploy logs.
+#
+# These must be set before TensorFlow is imported; DeepFace is imported lazily
+# inside the functions below, so setting them here is early enough. setdefault
+# leaves any operator override in place for debugging.
+os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')   # hide INFO and WARNING
+os.environ.setdefault('GLOG_minloglevel', '2')
+os.environ.setdefault('AUTOGRAPH_VERBOSITY', '0')
+os.environ.setdefault('KMP_WARNINGS', '0')
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+
+# TF_ENABLE_ONEDNN_OPTS=0 would silence two further lines, but it disables the
+# oneDNN kernels themselves — a real CPU inference slowdown on a box with no
+# GPU. Not worth trading throughput for two log lines.
 
 # Force UTF-8 stdout/stderr so DeepFace's emoji logger doesn't crash on
 # Windows consoles that use cp1252 (causes UnicodeEncodeError during model

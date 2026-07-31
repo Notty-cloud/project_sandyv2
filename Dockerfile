@@ -14,7 +14,15 @@ FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    # Quieten TensorFlow's informational startup logging so deploy logs stay
+    # readable. Also set in students/face.py for local runs. oneDNN is left
+    # enabled deliberately — disabling it would silence two more lines at the
+    # cost of CPU inference speed.
+    TF_CPP_MIN_LOG_LEVEL=2 \
+    GLOG_minloglevel=2 \
+    AUTOGRAPH_VERBOSITY=0 \
+    KMP_WARNINGS=0
 
 # libglib2.0-0 is required by opencv-headless; libgomp1 by TensorFlow's OpenMP runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
