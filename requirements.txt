@@ -18,5 +18,8 @@ django-redis>=5.4
 pgvector>=0.3.6
 # AI / face pipeline
 deepface>=0.0.93
-onnxruntime>=1.24.0
 opencv-python-headless>=4.11.0.86
+# onnxruntime intentionally omitted (~75 MB). It is imported only by
+# ai_engine/face_pipeline.py, which nothing calls and which cannot run anyway:
+# it needs det_10g.onnx and w600k_r50.onnx (~266 MB) in ai_engine/models/, and
+# those are gitignored and absent. Re-add it if that pipeline is revived.

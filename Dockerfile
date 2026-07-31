@@ -16,7 +16,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
-# libglib2.0-0 and libgomp1 are required by opencv-headless / onnxruntime
+# libglib2.0-0 is required by opencv-headless; libgomp1 by TensorFlow's OpenMP runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libglib2.0-0 \
         libgomp1 \
@@ -26,6 +26,12 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt
+
+# Bake DeepFace weights into the image. Without this the first enrolment after
+# every deploy downloads ~95 MB inside a request — see the script's docstring.
+# Its own layer, so it is not re-fetched when application code changes.
+COPY scripts/warm_face_models.py scripts/
+RUN python scripts/warm_face_models.py
 
 COPY . .
 
