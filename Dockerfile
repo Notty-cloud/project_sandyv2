@@ -32,8 +32,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+COPY requirements.txt constraints.txt ./
+# deepface depends on opencv-python (the GUI build), so pip installs it even
+# though requirements.txt asks for opencv-python-headless. That build links
+# against X11 (libxcb, libSM, libXext…), which a slim image does not carry, and
+# it fails at `import cv2`. Both wheels provide the same cv2 module, so drop the
+# GUI one and keep headless — no X11 libraries needed and a smaller image.
+# constraints.txt caps both distributions below 5.x; see that file for why.
+# --retries/--timeout: the TensorFlow wheel is ~600 MB and a dropped connection
+# mid-download fails the whole build; pip's defaults give up too easily.
+RUN pip install --retries 10 --timeout 120 -r requirements.txt -c constraints.txt \
+    && pip uninstall -y opencv-python opencv-contrib-python \
+    && pip install --no-cache-dir --force-reinstall -c constraints.txt opencv-python-headless \
+    && python -c "import cv2; \
+print('cv2', cv2.__version__); \
+assert cv2.__version__.startswith('4.'), 'expected opencv 4.x'; \
+assert hasattr(cv2, 'CascadeClassifier'), 'cv2.CascadeClassifier missing — deepface opencv detector would fail'; \
+print('cv2 headless + CascadeClassifier OK')"
 
 # Bake DeepFace weights into the image. Without this the first enrolment after
 # every deploy downloads ~95 MB inside a request — see the script's docstring.

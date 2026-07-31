@@ -1,0 +1,14 @@
+# Version caps applied to the whole dependency graph, including transitive
+# packages we do not name ourselves.
+#
+# deepface depends on opencv-python (the GUI build). Without a cap here pip
+# resolves it to 5.x, and OpenCV 5 removed cv2.CascadeClassifier — the API
+# deepface's default 'opencv' detector uses (students/face.py DETECTORS). That
+# breaks at *detection* time, so the image builds, the container starts, the
+# health check passes, and the first enrolment fails.
+#
+# Both opencv distributions install into the same cv2/ package directory, so
+# pinning only the headless one is not enough: whichever is present can shadow
+# the other.
+opencv-python<5
+opencv-python-headless<5

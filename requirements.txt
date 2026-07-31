@@ -18,7 +18,15 @@ django-redis>=5.4
 pgvector>=0.3.6
 # AI / face pipeline
 deepface>=0.0.93
-opencv-python-headless>=4.11.0.86
+# Pinned below 5.x: an unpinned floor resolved to opencv 5.0, a major release
+# deepface is not tested against. It imports fine, but the cascade detector
+# ('opencv' is first in students/face.py DETECTORS) would only fail at
+# detection time — during an enrolment, not at startup.
+opencv-python-headless>=4.11.0.86,<5
+# TensorFlow 2.16+ ships Keras 3; deepface still targets the Keras 2 API and
+# fails at import without this shim. It was present in local virtualenvs by
+# accident, which is why the container was the first place it broke.
+tf-keras>=2.20
 # onnxruntime intentionally omitted (~75 MB). It is imported only by
 # ai_engine/face_pipeline.py, which nothing calls and which cannot run anyway:
 # it needs det_10g.onnx and w600k_r50.onnx (~266 MB) in ai_engine/models/, and
