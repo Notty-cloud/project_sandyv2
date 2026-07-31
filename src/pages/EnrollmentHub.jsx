@@ -5,6 +5,13 @@ import Alert from '../components/Alert'
 import { enrollmentAPI, studentAPI, classAPI } from '../services/api'
 import { authService } from '../services/auth'
 
+// Cosine-similarity cutoff for accepting a face match. Single source of truth:
+// it is sent to the API *and* drives every label and colour below, so the UI
+// can never claim a score cleared a threshold it did not.
+// Matches FACE_MATCHING_THRESHOLD in config/settings.py.
+const MATCH_THRESHOLD = 0.65
+const MATCH_THRESHOLD_PCT = Math.round(MATCH_THRESHOLD * 100)
+
 // ─── Camera hook ──────────────────────────────────────────────────────────────
 function useCamera() {
   const videoRef = useRef(null)
@@ -176,7 +183,7 @@ function EnrollmentModal({ student, onClose, onEnrolled }) {
     const formData = new FormData()
     formData.append('image', imageFile)
     formData.append('tenant_id', tenantId)
-    formData.append('threshold', '0.3')
+    formData.append('threshold', String(MATCH_THRESHOLD))
     try {
       setVerifyLoading(true); setVerifyError('')
       const res = await studentAPI.identifyStudent(formData)
@@ -332,22 +339,24 @@ function EnrollmentModal({ student, onClose, onEnrolled }) {
             <>
               <div className="text-center mb-5">
                 <p className="text-sm text-gray-500 mb-1">Cosine Similarity Score</p>
-                <div className="text-5xl font-black mb-1" style={{ color: verifyResult.confidence >= 0.65 ? '#16a34a' : verifyResult.confidence >= 0.45 ? '#d97706' : '#dc2626' }}>
+                <div className="text-5xl font-black mb-1" style={{ color: verifyResult.confidence >= MATCH_THRESHOLD ? '#16a34a' : verifyResult.confidence >= 0.45 ? '#d97706' : '#dc2626' }}>
                   {verifyResult.confidence.toFixed(4)}
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3 mt-2 mb-1">
-                  <div className="h-3 rounded-full transition-all duration-700" style={{ width: `${Math.min(verifyResult.confidence * 100, 100)}%`, backgroundColor: verifyResult.confidence >= 0.65 ? '#16a34a' : verifyResult.confidence >= 0.45 ? '#d97706' : '#dc2626' }} />
+                  <div className="h-3 rounded-full transition-all duration-700" style={{ width: `${Math.min(verifyResult.confidence * 100, 100)}%`, backgroundColor: verifyResult.confidence >= MATCH_THRESHOLD ? '#16a34a' : verifyResult.confidence >= 0.45 ? '#d97706' : '#dc2626' }} />
                 </div>
-                <div className="flex justify-between text-xs text-gray-400 px-1"><span>0.0 No match</span><span>0.65 Threshold</span><span>1.0 Perfect</span></div>
+                <div className="flex justify-between text-xs text-gray-400 px-1"><span>0.0 No match</span><span>{MATCH_THRESHOLD} Threshold</span><span>1.0 Perfect</span></div>
               </div>
-              <div className={`rounded-xl p-4 mb-4 ${verifyResult.match ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                {verifyResult.match ? (
+              {/* A match is only "confirmed" when the score actually clears the
+                  threshold — never on the presence of a match object alone. */}
+              <div className={`rounded-xl p-4 mb-4 ${verifyResult.match && verifyResult.confidence >= MATCH_THRESHOLD ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                {verifyResult.match && verifyResult.confidence >= MATCH_THRESHOLD ? (
                   <div className="flex items-start gap-3">
                     <span className="text-2xl">✅</span>
                     <div>
                       <p className="font-bold text-green-800">Match Confirmed</p>
                       <p className="text-green-700 text-sm mt-0.5">Identified as <strong>{verifyResult.match.name}</strong> ({verifyResult.match.student_id})</p>
-                      <p className="text-green-600 text-xs mt-1">Score {(verifyResult.confidence * 100).toFixed(2)}% — above 65% threshold</p>
+                      <p className="text-green-600 text-xs mt-1">Score {(verifyResult.confidence * 100).toFixed(2)}% — at or above the {MATCH_THRESHOLD_PCT}% threshold</p>
                     </div>
                   </div>
                 ) : (
@@ -355,17 +364,20 @@ function EnrollmentModal({ student, onClose, onEnrolled }) {
                     <span className="text-2xl">❌</span>
                     <div>
                       <p className="font-bold text-red-800">No Match</p>
-                      <p className="text-red-700 text-sm mt-0.5">Score {(verifyResult.confidence * 100).toFixed(2)}% is below the 65% threshold.</p>
-                      <p className="text-red-600 text-xs mt-1">Try re-enrolling with a clearer, well-lit photo.</p>
+                      <p className="text-red-700 text-sm mt-0.5">Score {(verifyResult.confidence * 100).toFixed(2)}% is below the {MATCH_THRESHOLD_PCT}% threshold.</p>
+                      {verifyResult.match && (
+                        <p className="text-red-700 text-xs mt-1">Closest was <strong>{verifyResult.match.name}</strong> ({verifyResult.match.student_id}), but not close enough to accept.</p>
+                      )}
+                      <p className="text-red-600 text-xs mt-1">If this is an enrolled student, re-enrol with a clearer, well-lit, front-facing photo.</p>
                     </div>
                   </div>
                 )}
               </div>
               <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-1.5 text-sm">
-                {[['Algorithm', 'Cosine Similarity'], ['Model', 'Facenet512 (512-D)'], ['Threshold', '0.65'], ['Score', `${verifyResult.confidence.toFixed(4)} ${verifyResult.confidence >= 0.65 ? '✓' : '✗'}`]].map(([k, v]) => (
+                {[['Algorithm', 'Cosine Similarity'], ['Model', 'Facenet512 (512-D)'], ['Threshold', String(MATCH_THRESHOLD)], ['Score', `${verifyResult.confidence.toFixed(4)} ${verifyResult.confidence >= MATCH_THRESHOLD ? '✓' : '✗'}`]].map(([k, v]) => (
                   <div key={k} className="flex justify-between">
                     <span className="text-gray-600">{k}</span>
-                    <span className={`font-bold ${k === 'Score' ? (verifyResult.confidence >= 0.65 ? 'text-green-600' : 'text-red-600') : 'text-gray-800'}`}>{v}</span>
+                    <span className={`font-bold ${k === 'Score' ? (verifyResult.confidence >= MATCH_THRESHOLD ? 'text-green-600' : 'text-red-600') : 'text-gray-800'}`}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -413,7 +425,7 @@ function GroupIdentifyModal({ onClose }) {
     const formData = new FormData()
     formData.append('image', blob)
     formData.append('tenant_id', tenantId)
-    formData.append('threshold', '0.65')
+    formData.append('threshold', String(MATCH_THRESHOLD))
     try {
       setLoading(true); setError('')
       const res = await studentAPI.identifyGroup(formData)
@@ -424,7 +436,7 @@ function GroupIdentifyModal({ onClose }) {
     } finally { setLoading(false) }
   }
 
-  const confColor = (c) => c >= 0.65 ? 'text-green-600' : c >= 0.45 ? 'text-amber-600' : 'text-red-500'
+  const confColor = (c) => c >= MATCH_THRESHOLD ? 'text-green-600' : c >= 0.45 ? 'text-amber-600' : 'text-red-500'
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4" onClick={onClose}>
