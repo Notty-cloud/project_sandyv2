@@ -3,12 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { authAPI } from '../services/api'
 import { authService } from '../services/auth'
 
-const DEMO_USERS = [
-  { username: 'admin',        password: 'Admin@sandy1', role: 'Head Teacher', badge: 'bg-purple-100 text-purple-700' },
-  { username: 'coordinator',  password: 'Coord@sandy1', role: 'Coordinator',  badge: 'bg-blue-100 text-blue-700'   },
-  { username: 'teacher',      password: 'Teach@sandy1', role: 'Teacher',      badge: 'bg-green-100 text-green-700' },
-]
-
 const ERROR_MESSAGES = {
   'Invalid credentials.': 'Username or password is incorrect.',
   'Account is locked. Contact a level 3 admin to unlock it.': 'This account is locked. Contact your Head Teacher to unlock it.',
@@ -44,12 +38,6 @@ const SignIn = ({ onLogin }) => {
     } finally {
       setLoading(false)
     }
-  }
-
-  const fillCredentials = (user) => {
-    setAdminName(user.username)
-    setPassword(user.password)
-    setError('')
   }
 
   return (
@@ -103,27 +91,6 @@ const SignIn = ({ onLogin }) => {
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
-
-        {/* Demo accounts */}
-        <div className="mt-8">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Test accounts — click to fill</p>
-          <div className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
-            {DEMO_USERS.map((u) => (
-              <button
-                key={u.username}
-                type="button"
-                onClick={() => fillCredentials(u)}
-                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition"
-              >
-                <div>
-                  <span className="text-sm font-medium text-gray-800">{u.username}</span>
-                  <span className="ml-2 text-xs text-gray-400">{u.password}</span>
-                </div>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${u.badge}`}>{u.role}</span>
-              </button>
-            ))}
-          </div>
-        </div>
 
         <p className="text-center text-xs text-gray-400 mt-8">© 2026 Facial Recognition Attendance System</p>
       </div>
