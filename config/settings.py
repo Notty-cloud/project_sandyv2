@@ -87,6 +87,12 @@ DATABASES = {
     )
 }
 
+# HnswIndex (students.StudentEmbedding) requires django.contrib.postgres.
+# Added only on PostgreSQL — Django's own docs warn against installing it
+# against other backends, and the SQLite path uses a JSONField instead.
+if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+    INSTALLED_APPS.append('django.contrib.postgres')
+
 # ─── CACHE (Redis) ────────────────────────────────────────────────────────────
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 CACHES = {
