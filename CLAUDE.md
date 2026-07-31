@@ -50,15 +50,16 @@ Copy `.env.example` to `.env` and populate:
 | `VITE_API_BASE_URL` | Frontend only; defaults to `http://localhost:3000/api` |
 | `FACE_MATCHING_THRESHOLD` | Cosine similarity cutoff (default 0.65) |
 | `FACE_QUALITY_THRESHOLD` | Detection confidence threshold (default 0.6) |
+| `FACE_BACKEND` | `deepface` (default) or `onnx` — see Face recognition below |
 
-The ONNX model files (~266 MB total) must be placed in `ai_engine/models/` before the backend can process faces:
-- `det_10g.onnx` — SCRFD-10GF face detector
-- `w600k_r50.onnx` — ArcFace ResNet50 embedding model
+No model files need to be downloaded for the default backend. DeepFace fetches
+its Facenet512 weights automatically, and the Docker image pre-fetches them at
+build time via `scripts/warm_face_models.py`.
 
 ## Architecture
 
 ### Request flow
-Browser → React SPA (`:5173`) → Axios (with JWT header) → Django REST API (`:3000`) → Django app views → AI Engine (in-process) → ONNX Runtime
+Browser → React SPA (`:5173`) → Axios (with JWT header) → Django REST API (`:3000`) → Django app views → face backend (in-process) → DeepFace/TensorFlow
 
 Vite proxies `/api` calls from `:5173` to `:3000` in development (`vite.config.js`).
 
@@ -78,7 +79,7 @@ Both `/api/` and `/api/v1/` prefixes are registered and route to the same app ro
 | `classes` | Class management |
 | `enrollments` | Enrollment workflow: `pending` → `enrolled` / `failed` / `expired` |
 | `attendance` | Attendance records with confidence scores |
-| `ai_engine` | Face detection (SCRFD-10GF) + embedding (ArcFace ResNet50) |
+| `ai_engine` | **Experimental** ONNX face pipeline — not used by default, see below |
 
 ### Authentication
 JWT tokens are issued by `admins/views.py` using PyJWT + bcrypt (BCryptSHA256PasswordHasher). Tokens carry `admin_id` and `jti` claims; role and level are resolved from the `Admin` table at validation time. Logout immediately blacklists the token by `jti`.
@@ -90,12 +91,45 @@ Token blacklist check order (in `admins/authentication.py`):
 ### Multi-tenancy
 Every model has a `tenant_id` UUID field (not a FK). All queries must be scoped by tenant. Each Admin account creates its own tenant namespace via `create_admin.py`.
 
-### AI Engine (`ai_engine/`)
-Two-stage ONNX pipeline:
-1. **SCRFD-10GF** (`det_10g.onnx`) — detects all faces and 5-point landmarks at 640×640 input
-2. **ArcFace ResNet50** (`w600k_r50.onnx`) — generates 512-dim L2-normalized embeddings
+### Face recognition — two backends
+Selected by `FACE_BACKEND`; the abstraction lives in `students/backends.py`.
 
-`face_pipeline.py` manages thread-safe ONNX sessions. `services/embedding_service.py` is the higher-level interface consumed by Django views.
+**`deepface` — production baseline (default).** `students/face.py` runs DeepFace
+with Facenet512. Weights download automatically and are baked into the image at
+build time. Requires TensorFlow (~2.4 GB installed), which dominates image size
+and build time.
+
+**`onnx` — experimental.** `ai_engine/face_pipeline.py` runs a two-stage ONNX
+pipeline: SCRFD-10GF (`det_10g.onnx`) for detection and 5-point landmarks at
+640×640, then ArcFace ResNet50 (`w600k_r50.onnx`) for the embedding.
+`face_pipeline.py` manages thread-safe ONNX sessions; `services/embedding_service.py`
+is a higher-level wrapper. Kept because ONNX Runtime is ~75 MB against
+TensorFlow's ~2.4 GB and runs on ARM — the plausible basis for on-site edge
+devices. To enable:
+
+```bash
+pip install -r requirements-onnx.txt   # onnxruntime, deliberately not in requirements.txt
+# place det_10g.onnx and w600k_r50.onnx in ai_engine/models/ (see its .gitkeep)
+FACE_BACKEND=onnx python manage.py runserver 3000
+```
+
+**The two are not interchangeable.** Facenet512 and ArcFace embed into different
+vector spaces, so comparing a vector from one against the other yields
+plausible-looking noise. `StudentEmbedding.backend` records the producer and all
+matching filters on it. Changing `FACE_BACKEND` on a populated system means
+re-enrolling every student. Group identification (`identify-group`) is
+DeepFace-only — the ONNX pipeline returns a single face per image.
+
+Compare them on real photos before switching:
+
+```bash
+python scripts/benchmark_face_backends.py path/to/faces --runs 3
+```
+
+It reports latency and, more importantly, *separation* — mean same-person
+similarity minus mean different-person similarity, computed within each backend.
+A fast backend that cannot tell people apart is useless, and a threshold tuned
+for Facenet512 will not necessarily suit ArcFace.
 
 ### Database conditional logic
 `StudentEmbedding.embedding` field switches on the configured database engine:

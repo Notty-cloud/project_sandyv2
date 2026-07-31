@@ -131,6 +131,11 @@ JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', SECRET_KEY)
 ACCESS_TOKEN_LIFETIME = timedelta(hours=int(os.getenv('ACCESS_TOKEN_LIFETIME_HOURS', '8')))
 LOGIN_LOCKOUT_THRESHOLD = int(os.getenv('LOGIN_LOCKOUT_THRESHOLD', '5'))
 
+# 'deepface' (production baseline) or 'onnx' (experimental — see
+# students/backends.py). Embeddings from the two are NOT comparable; changing
+# this requires re-enrolling every student.
+FACE_BACKEND = os.getenv('FACE_BACKEND', 'deepface')
+
 FACE_MATCHING_THRESHOLD = float(os.getenv('FACE_MATCHING_THRESHOLD', '0.65'))
 FACE_QUALITY_THRESHOLD = float(os.getenv('FACE_QUALITY_THRESHOLD', '0.6'))
 ATTENDANCE_CUTOFF_HOUR = int(os.getenv('ATTENDANCE_CUTOFF_HOUR', '7'))

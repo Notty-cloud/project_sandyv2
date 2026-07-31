@@ -1,0 +1,15 @@
+# Optional — only needed to run the experimental 'onnx' face backend.
+# Deliberately kept out of requirements.txt so the production image does not
+# carry ~75 MB for a pipeline it never calls.
+#
+#   pip install -r requirements-onnx.txt
+#
+# The backend also needs two model files that are NOT in version control:
+#   ai_engine/models/det_10g.onnx    (~16 MB)
+#   ai_engine/models/w600k_r50.onnx  (~250 MB)
+# See ai_engine/models/.gitkeep for how to obtain them.
+#
+# Then run with FACE_BACKEND=onnx, and compare against the baseline using:
+#   python scripts/benchmark_face_backends.py <image-dir>
+
+onnxruntime>=1.24.0

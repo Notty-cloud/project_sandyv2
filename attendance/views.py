@@ -75,7 +75,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
           location    (string) — camera/location label, optional
         """
         from students.models import StudentEmbedding
-        from students.face import extract_embedding
+        from students.backends import extract_embedding
         from students.matching import best_match
         from django.utils import timezone
 
@@ -122,7 +122,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         # ── Find best matching student (HNSW-indexed on PostgreSQL) ──────
         best_emb, best_score = best_match(
             StudentEmbedding.objects
-            .filter(tenant_id=tenant_id, is_active=True)
+            .filter(
+                tenant_id=tenant_id,
+                is_active=True,
+                # Cross-backend comparison is meaningless — see students/backends.py
+                backend=face_data['backend'],
+            )
             .select_related('student'),
             query_embedding,
         )

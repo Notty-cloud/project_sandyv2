@@ -103,6 +103,51 @@ class BestMatchTests(TestCase):
 		self.assertAlmostEqual(score, cosine_similarity(query, vector), places=5)
 
 
+class BackendSelectionTests(TestCase):
+	def test_default_backend_is_deepface(self):
+		from .backends import DEEPFACE, active_backend
+		self.assertEqual(active_backend(), DEEPFACE)
+
+	def test_unknown_backend_is_rejected(self):
+		from django.test import override_settings
+		from .backends import active_backend
+
+		with override_settings(FACE_BACKEND='not-a-backend'):
+			with self.assertRaises(ValueError):
+				active_backend()
+
+	def test_embeddings_record_their_backend(self):
+		student = Student.objects.create(
+			tenant_id=uuid.uuid4(), student_id='STU-9',
+			name='Dana', grade='11', section='C',
+		)
+		embedding = StudentEmbedding.objects.create(
+			student=student, tenant_id=student.tenant_id,
+			embedding=_unit_vector(0), version=1, is_active=True,
+		)
+		self.assertEqual(embedding.backend, 'deepface')
+
+	def test_matching_never_crosses_backends(self):
+		"""Facenet512 and ArcFace occupy different vector spaces — an identical
+		vector from the other backend must not be returned as a match."""
+		tenant_id = uuid.uuid4()
+		student = Student.objects.create(
+			tenant_id=tenant_id, student_id='STU-10',
+			name='Eli', grade='11', section='C',
+		)
+		StudentEmbedding.objects.create(
+			student=student, tenant_id=tenant_id, embedding=_unit_vector(0),
+			backend='onnx', version=1, is_active=True,
+		)
+
+		deepface_scoped = StudentEmbedding.objects.filter(
+			tenant_id=tenant_id, is_active=True, backend='deepface',
+		).select_related('student')
+
+		embedding, _ = best_match(deepface_scoped, _unit_vector(0))
+		self.assertIsNone(embedding)
+
+
 class TenantScopingOfMatchesTests(TestCase):
 	"""best_match applies no filtering itself — callers must scope the queryset."""
 

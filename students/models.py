@@ -38,6 +38,10 @@ class StudentEmbedding(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='embeddings')
     tenant_id = models.UUIDField()
     embedding = _embedding_field
+    # Which pipeline produced this vector. Facenet512 (deepface) and ArcFace
+    # (onnx) embed into different spaces, so comparing across backends returns
+    # meaningless similarities — matching filters on this field.
+    backend = models.CharField(max_length=20, default='deepface', db_index=True)
     version = models.IntegerField(default=1)
     quality_score = models.FloatField(null=True, blank=True)
     enrolled_at = models.DateTimeField(auto_now_add=True)

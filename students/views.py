@@ -8,7 +8,8 @@ from admins.permissions import RoleLevelPermission
 from admins.tenancy import TenantScopedMixin, request_tenant_id, scope_to_tenant
 from .models import Student, StudentEmbedding
 from .serializers import StudentSerializer, StudentDetailSerializer, StudentEmbeddingSerializer
-from .face import extract_embedding, extract_all_embeddings
+from .backends import active_backend, extract_embedding
+from .face import extract_all_embeddings
 from .matching import best_match
 
 
@@ -105,6 +106,7 @@ class StudentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
                 student=student_locked,
                 tenant_id=student_locked.tenant_id,
                 embedding=embedding,
+                backend=face_data['backend'],
                 version=next_version,
                 quality_score=quality_score,
                 enrolled_by=enrolled_by,
@@ -182,6 +184,8 @@ class StudentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         active_embeddings = StudentEmbedding.objects.filter(
             tenant_id=tenant_id,
             is_active=True,
+            # Never compare across backends — different models, different spaces.
+            backend=face_data['backend'],
         ).select_related('student')
 
         # Pushed into the database on PostgreSQL so the HNSW index is used.
@@ -236,8 +240,10 @@ class StudentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': f'Face processing failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        # extract_all_embeddings is DeepFace-only (the ONNX pipeline returns a
+        # single face), so group identification always matches deepface vectors.
         active_embeddings = StudentEmbedding.objects.filter(
-            tenant_id=tenant_id, is_active=True
+            tenant_id=tenant_id, is_active=True, backend='deepface',
         ).select_related('student')
 
         results = []
