@@ -42,6 +42,11 @@ class StudentEmbedding(models.Model):
     # (onnx) embed into different spaces, so comparing across backends returns
     # meaningless similarities — matching filters on this field.
     backend = models.CharField(max_length=20, default='deepface', db_index=True)
+    # Which face detector produced the crop this vector was computed from.
+    # Detectors align faces differently and Facenet512 is alignment-sensitive,
+    # so a detector change between enrolment and recognition depresses the
+    # similarity score on its own. Recorded to make that visible.
+    detector = models.CharField(max_length=20, blank=True, default='')
     version = models.IntegerField(default=1)
     quality_score = models.FloatField(null=True, blank=True)
     enrolled_at = models.DateTimeField(auto_now_add=True)

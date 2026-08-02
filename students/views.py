@@ -192,6 +192,7 @@ class StudentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
                 tenant_id=student_locked.tenant_id,
                 embedding=embedding,
                 backend=face_data['backend'],
+                detector=face_data.get('detector', ''),
                 version=next_version,
                 quality_score=quality_score,
                 enrolled_by=enrolled_by,

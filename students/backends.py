@@ -64,6 +64,7 @@ def _extract_deepface(image_file):
 
     result = deepface_extract(image_file)  # already raises ValueError
     result['backend'] = DEEPFACE
+    result.setdefault('detector', '')
     return result
 
 
@@ -98,4 +99,5 @@ def _extract_onnx(image_file):
         'quality_score': result['quality_score'],
         'face_count': result.get('face_count', 1),
         'backend': ONNX,
+        'detector': 'scrfd',  # the ONNX pipeline always uses SCRFD-10GF
     }

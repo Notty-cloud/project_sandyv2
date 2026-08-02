@@ -44,9 +44,21 @@ for _stream in ('stdout', 'stderr'):
 
 MODEL_NAME = 'Facenet512'      # 512-dim output, matches student_embeddings schema
 
-# opencv ships with DeepFace — no extra download. retinaface/mtcnn are more
-# accurate but need weight files; try them after opencv succeeds or falls back.
-DETECTORS = ['opencv', 'retinaface', 'mtcnn']
+# Order matters, and not for the reason it looks like.
+#
+# Each detector crops and aligns the face differently, and Facenet512 is
+# sensitive to alignment — so two embeddings are only comparable when the same
+# detector produced them. Because the loop below takes whichever detector
+# succeeds first, putting the least reliable one first made the choice depend on
+# whether it happened to fail: the same person could be enrolled via retinaface
+# and later recognised via opencv, yielding a poor similarity score for no
+# reason other than the crop.
+#
+# retinaface leads because it is the most accurate and succeeds on almost
+# everything, so in practice one detector is used throughout and embeddings stay
+# comparable. opencv is kept last as a genuine fallback rather than the default.
+# All three are pre-fetched at image build time (scripts/warm_face_models.py).
+DETECTORS = ['retinaface', 'mtcnn', 'opencv']
 
 
 def extract_embedding(image_file):
@@ -83,6 +95,7 @@ def extract_embedding(image_file):
         tmp_path = tmp.name
 
     results = None
+    used_detector = None
 
     try:
         for detector in DETECTORS:
@@ -94,6 +107,7 @@ def extract_embedding(image_file):
                     enforce_detection=True,
                     align=True,
                 )
+                used_detector = detector
                 break
             except Exception:
                 continue
@@ -119,6 +133,9 @@ def extract_embedding(image_file):
         'embedding': raw_embedding.tolist(),
         'quality_score': round(float(best.get('face_confidence', 0.0)), 4),
         'face_count': len(results),
+        # Recorded so a poor similarity between two photos of one person can be
+        # attributed to a detector change rather than guessed at.
+        'detector': used_detector,
     }
 
 
