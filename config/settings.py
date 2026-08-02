@@ -39,6 +39,45 @@ if ON_RAILWAY:
     ]
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+# ─── TRANSPORT SECURITY ───────────────────────────────────────────────────────
+# Production only: enabling these under DEBUG would redirect local http traffic
+# to https and set Secure cookies the dev server cannot deliver.
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'same-origin'
+
+    # Camera access requires a secure context anyway, so plain http is useless
+    # to this app. The health endpoint is exempt: the platform probe may arrive
+    # without X-Forwarded-Proto, and a 301 there fails the deployment rather
+    # than securing anything.
+    SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True') == 'True'
+    SECURE_REDIRECT_EXEMPT = [r'^health/$']
+
+    # HSTS tells browsers to refuse http for this host for the given period,
+    # and cannot be revoked early — a browser that cached it will not go back.
+    # One hour by default: enough to satisfy the check and to be useful, short
+    # enough that a mistake ages out the same day. Raise it deliberately once
+    # the deployment is settled. Deliberately no includeSubDomains: on a shared
+    # *.up.railway.app domain that would speak for hosts that are not ours.
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '3600'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
+
+    # Both silenced checks concern HSTS scope, and both are refusals rather
+    # than omissions. A deployment check that always prints warnings stops
+    # being read, so the reasoning lives here instead:
+    #
+    #   W005 includeSubDomains — the app is on a shared *.up.railway.app
+    #     domain. Asserting a policy for every sibling subdomain would speak
+    #     for hosts that are not ours. Revisit on a dedicated domain.
+    #   W021 preload — submission to the browser preload list is effectively
+    #     permanent and needs a long max-age plus includeSubDomains. Not a
+    #     commitment to make for a pilot.
+    SILENCED_SYSTEM_CHECKS = ['security.W005', 'security.W021']
+
 INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.auth',
@@ -63,7 +102,15 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
+    # DRF views are csrf_exempt, so this does not affect the JWT API; it covers
+    # the Django-rendered routes and satisfies the deployment check.
+    'django.middleware.csrf.CsrfViewMiddleware',
+    # Refuse to be framed — the app has a camera permission prompt, and a
+    # framed login page is the standard clickjacking setup.
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+X_FRAME_OPTIONS = 'DENY'
 
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
