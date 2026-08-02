@@ -144,6 +144,24 @@ if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
 # ─── CACHE (Redis) ────────────────────────────────────────────────────────────
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 
+# A REDIS_URL that is not a Redis URL is worse than none at all: redis-py raises
+# ValueError while *building the connection pool*, before any network call, so
+# IGNORE_EXCEPTIONS — which only covers connection failures — does not catch it.
+# Every cache call then raises, and the app survives only because callers wrap
+# them in broad excepts. A platform variable reference that fails to resolve
+# lands exactly here, so validate the scheme and degrade deliberately instead.
+_REDIS_SCHEMES = ('redis://', 'rediss://', 'unix://')
+REDIS_CONFIGURED = REDIS_URL.startswith(_REDIS_SCHEMES)
+
+if not REDIS_CONFIGURED:
+    import warnings
+    warnings.warn(
+        f'REDIS_URL is not a Redis URL (got {len(REDIS_URL)} characters starting '
+        f'{REDIS_URL[:12]!r}). Falling back to a local in-process cache. The token '
+        f'blacklist still works via the database, but logout will not be shared '
+        f'between workers.'
+    )
+
 # Under `manage.py test`, use an in-process cache instead of Redis.
 #
 # IGNORE_EXCEPTIONS makes a missing Redis non-fatal, but not free: every cache
@@ -153,11 +171,11 @@ REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 # test — slow enough that nobody would run it.
 _TESTING = 'test' in sys.argv
 
-if _TESTING:
+if _TESTING or not REDIS_CONFIGURED:
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'sandy-tests',
+            'LOCATION': 'sandy-tests' if _TESTING else 'sandy-fallback',
         }
     }
 else:

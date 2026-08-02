@@ -11,6 +11,13 @@ echo "PORT=${PORT:-8000}"
 echo "DEBUG=${DEBUG:-unset}"
 echo "DATABASE_URL is $([ -n "$DATABASE_URL" ] && echo SET || echo 'NOT SET — using ephemeral SQLite')"
 echo "SECRET_KEY is $([ -n "$SECRET_KEY" ] && echo SET || echo 'NOT SET')"
+# A REDIS_URL holding something other than a Redis URL — a platform variable
+# reference that failed to resolve, say — otherwise degrades silently.
+case "${REDIS_URL:-}" in
+  "")                       echo "REDIS_URL is NOT SET — cache is local to each worker" ;;
+  redis://*|rediss://*|unix://*) echo "REDIS_URL looks valid (${#REDIS_URL} chars)" ;;
+  *)                        echo "!! REDIS_URL is NOT a Redis URL (${#REDIS_URL} chars, starts '$(printf '%.12s' "$REDIS_URL")') — falling back to a local cache" ;;
+esac
 
 echo "--- collectstatic ---"
 python manage.py collectstatic --noinput || echo "!! collectstatic FAILED (continuing)"
