@@ -657,7 +657,7 @@ const EnrollmentHub = () => {
   // ── Coordinator/Head Teacher paths ───────────────────────────────────────────
   const fetchAllStudents = async () => {
     try {
-      const res = await studentAPI.getAllStudents()
+      const res = await studentAPI.getAllStudents({ page_size: 1000 })
       setAllStudents(res.data?.results ?? res.data ?? [])
     } catch { setPageError('Failed to load students.') }
   }

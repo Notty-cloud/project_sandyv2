@@ -204,7 +204,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'config.pagination.ConfigurablePageNumberPagination',
     'PAGE_SIZE': 50,
     'DEFAULT_THROTTLE_RATES': {
         'login': '5/min',

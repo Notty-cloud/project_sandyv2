@@ -298,7 +298,7 @@ const StudentManagement = () => {
   const fetchStudents = async () => {
     setLoading(true)
     try {
-      const res = await studentAPI.getAllStudents()
+      const res = await studentAPI.getAllStudents({ page_size: 1000 })
       setStudents(res.data?.results ?? res.data ?? [])
     } catch {
       setError('Failed to load students.')

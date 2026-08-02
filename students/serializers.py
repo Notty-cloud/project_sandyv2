@@ -20,6 +20,14 @@ class StudentSerializer(serializers.ModelSerializer):
     photo_count = serializers.SerializerMethodField()
 
     def get_photo_count(self, obj):
+        # Prefer the annotation from StudentViewSet.get_queryset. Counting here
+        # costs one query per student — 201 queries for a 200-student roster,
+        # which over a network round-trip is the difference between a page that
+        # loads and one that hangs. The fallback keeps single-object callers
+        # (and anything serialising an unannotated queryset) correct.
+        annotated = getattr(obj, 'active_photo_count', None)
+        if annotated is not None:
+            return annotated
         return obj.embeddings.filter(is_active=True).count()
 
     class Meta:

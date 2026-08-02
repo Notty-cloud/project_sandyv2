@@ -1,4 +1,5 @@
 import numpy as np
+from django.db.models import Count, Q
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -94,7 +95,11 @@ class StudentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     permission_classes = [RoleLevelPermission]
     required_roles = ('teacher', 'admin')
     minimum_authorization_level = 1
-    queryset = Student.objects.all()
+    # Count enrolled photos in the same query rather than one per student —
+    # StudentSerializer.get_photo_count reads this annotation.
+    queryset = Student.objects.annotate(
+        active_photo_count=Count('embeddings', filter=Q(embeddings__is_active=True)),
+    )
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['grade', 'section', 'is_active']
     search_fields = ['name', 'student_id']

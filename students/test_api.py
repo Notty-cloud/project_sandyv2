@@ -234,6 +234,79 @@ class EnrolEndpointTests(FaceApiTestCase):
 		self.assertIn('Maximum of 5', str(response.data))
 
 
+class StudentListQueryCountTests(FaceApiTestCase):
+	"""
+	photo_count used to be counted per student, so listing a roster issued one
+	query per row — 201 for 200 students. Over a network round-trip that is the
+	difference between a page that loads and one that appears to hang.
+	"""
+
+	def _queries_to_list(self):
+		from django.db import connection
+		from django.test.utils import CaptureQueriesContext
+
+		with CaptureQueriesContext(connection) as captured:
+			response = self.client.get('/api/students/')
+		self.assertEqual(response.status_code, 200)
+		return len(captured), len(response.data['results'])
+
+	def _add_students(self, count, prefix):
+		Student.objects.bulk_create([
+			Student(tenant_id=self.tenant_id, student_id=f'{prefix}-{i:03d}',
+			        name=f'Student {i}', grade='10', section='A')
+			for i in range(count)
+		])
+
+	def test_query_count_does_not_grow_with_roster_size(self):
+		"""
+		The assertion is the *shape*, not a magic number: adding a hundred
+		students must not add a hundred queries. A fixed count would break on
+		any unrelated middleware change while missing the regression that
+		matters.
+		"""
+		# Both sizes stay inside one page, so the comparison is about rows
+		# serialised rather than pagination.
+		self._add_students(6, 'SMALL')
+		few_queries, few_rows = self._queries_to_list()
+
+		self._add_students(35, 'LARGE')
+		many_queries, many_rows = self._queries_to_list()
+
+		self.assertGreater(many_rows, few_rows + 30, 'expected the roster to grow')
+		self.assertEqual(
+			few_queries, many_queries,
+			f'{few_rows} students took {few_queries} queries but {many_rows} took '
+			f'{many_queries} — the count scales with the roster (N+1)',
+		)
+
+	def test_photo_count_is_still_accurate(self):
+		self.given_enrolled(self.alice, self.alice_face)
+		self.given_enrolled(self.alice, _near(self.alice_face, 2))
+		self.given_enrolled(self.bob, self.bob_face)
+
+		response = self.client.get('/api/students/')
+		counts = {row['student_id']: row['photo_count'] for row in response.data['results']}
+
+		self.assertEqual(counts['STU-A'], 2)
+		self.assertEqual(counts['STU-B'], 1)
+
+	def test_inactive_photos_are_not_counted(self):
+		self.given_enrolled(self.alice, self.alice_face)
+		StudentEmbedding.objects.filter(student=self.alice).update(is_active=False)
+
+		response = self.client.get('/api/students/')
+		counts = {row['student_id']: row['photo_count'] for row in response.data['results']}
+		self.assertEqual(counts['STU-A'], 0)
+
+	def test_detail_view_still_reports_photo_count(self):
+		"""The serializer falls back to counting when there is no annotation."""
+		self.given_enrolled(self.alice, self.alice_face)
+		from students.serializers import StudentSerializer
+
+		unannotated = Student.objects.get(pk=self.alice.pk)
+		self.assertEqual(StudentSerializer(unannotated).data['photo_count'], 1)
+
+
 class IdentifyEndpointTests(FaceApiTestCase):
 	def identify(self, face, **extra):
 		with patch('students.views.extract_embedding', return_value=face):
