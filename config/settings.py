@@ -3,6 +3,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 import dj_database_url
 import os
+import sys
 
 load_dotenv()
 
@@ -95,17 +96,35 @@ if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
 
 # ─── CACHE (Redis) ────────────────────────────────────────────────────────────
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': REDIS_URL,
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'IGNORE_EXCEPTIONS': True,
-        },
-        'KEY_PREFIX': 'sandy',
+
+# Under `manage.py test`, use an in-process cache instead of Redis.
+#
+# IGNORE_EXCEPTIONS makes a missing Redis non-fatal, but not free: every cache
+# call still opens a socket, and on a machine with nothing listening the
+# refusal takes ~2 seconds. The login throttle and token blacklist touch the
+# cache on most requests, which put the API suite at roughly 19 seconds per
+# test — slow enough that nobody would run it.
+_TESTING = 'test' in sys.argv
+
+if _TESTING:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'sandy-tests',
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'IGNORE_EXCEPTIONS': True,
+            },
+            'KEY_PREFIX': 'sandy',
+        }
+    }
 
 # ─── REST FRAMEWORK ──────────────────────────────────────────────────────────
 REST_FRAMEWORK = {
