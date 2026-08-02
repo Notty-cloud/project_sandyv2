@@ -20,6 +20,7 @@ this file is meant to be copied around. Recreate them with create_admin.py.
 Restore with: python manage.py restore_face_data <file>
 """
 import json
+import uuid
 from datetime import datetime, timezone
 
 from django.core.management.base import BaseCommand, CommandError
@@ -29,6 +30,20 @@ from enrollments.models import Enrollment
 from students.models import Student, StudentEmbedding
 
 FORMAT_VERSION = 1
+
+
+def _as_floats(embedding):
+    """
+    Coerce a stored embedding to plain Python floats.
+
+    pgvector hands back a numpy array whose float32 values json.dump cannot
+    serialise; SQLite hands back a plain list. Normalising here keeps the file
+    identical whichever backend produced it, so a PostgreSQL export restores
+    onto SQLite and vice versa.
+    """
+    if hasattr(embedding, 'tolist'):
+        embedding = embedding.tolist()
+    return [float(value) for value in embedding]
 
 
 class Command(BaseCommand):
@@ -74,7 +89,7 @@ class Command(BaseCommand):
             ],
             'classes': [
                 {
-                    'id': c.id,
+                    'id': str(c.id),
                     'tenant_id': str(c.tenant_id),
                     'class_name': c.class_name,
                     'subject': c.subject,
@@ -89,13 +104,11 @@ class Command(BaseCommand):
                 {
                     'student_id': str(e.student_id),
                     'tenant_id': str(e.tenant_id),
-                    # list() so a pgvector column and a SQLite JSON array both
-                    # serialise identically and restore onto either backend.
-                    'embedding': list(e.embedding),
+                    'embedding': _as_floats(e.embedding),
                     'backend': e.backend,
                     'detector': e.detector,
                     'version': e.version,
-                    'quality_score': e.quality_score,
+                    'quality_score': float(e.quality_score) if e.quality_score is not None else None,
                     'is_active': e.is_active,
                 }
                 for e in embeddings
@@ -119,11 +132,27 @@ class Command(BaseCommand):
                 'No embeddings found — this backup contains no face data.'
             ))
 
+        def _fallback(value):
+            """Last-resort coercion so an unexpected column type reports itself
+            clearly instead of aborting mid-write with a bare TypeError."""
+            if hasattr(value, 'tolist'):
+                return value.tolist()
+            if isinstance(value, uuid.UUID):
+                return str(value)
+            if isinstance(value, (datetime,)):
+                return value.isoformat()
+            raise TypeError(
+                f'Cannot serialise {type(value).__name__} in backup — '
+                f'this is a bug in backup_face_data.'
+            )
+
         try:
             with open(options['output'], 'w', encoding='utf-8') as handle:
-                json.dump(payload, handle, indent=options['indent'])
+                json.dump(payload, handle, indent=options['indent'], default=_fallback)
         except OSError as exc:
             raise CommandError(f'Could not write {options["output"]}: {exc}')
+        except TypeError as exc:
+            raise CommandError(str(exc))
 
         self.stdout.write(self.style.SUCCESS(f'Wrote {options["output"]}'))
         for name, count in counts.items():

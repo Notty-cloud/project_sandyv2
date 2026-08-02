@@ -121,6 +121,25 @@ class BackupRestoreRoundTripTests(TestCase):
 		self.assertEqual(payload['students'][0]['name'], 'Ana')
 		self.assertEqual(len(payload['embeddings']), 1)
 
+	def test_numpy_embeddings_are_serialisable(self):
+		"""
+		pgvector returns embeddings as a numpy array of float32, which json.dump
+		cannot serialise — the export failed against PostgreSQL while passing
+		here, because SQLite stores a plain list. _as_floats normalises both.
+		"""
+		import numpy as np
+		from students.management.commands.backup_face_data import _as_floats
+
+		as_numpy = np.array(self.embedding_values, dtype=np.float32)
+		coerced = _as_floats(as_numpy)
+
+		self.assertIsInstance(coerced, list)
+		self.assertTrue(all(type(v) is float for v in coerced))
+		json.dumps(coerced)  # would raise before the fix
+		self.assertEqual(len(coerced), 512)
+		for original, restored in zip(self.embedding_values, coerced):
+			self.assertAlmostEqual(original, restored, places=5)
+
 	def test_restore_rejects_an_unknown_format(self):
 		from django.core.management.base import CommandError
 
