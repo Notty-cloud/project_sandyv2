@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Header from '../components/Header'
 import Navigation from '../components/Navigation'
 import Alert from '../components/Alert'
@@ -137,6 +137,150 @@ function StudentModal({ student, onClose, onSaved }) {
   )
 }
 
+// ─── CSV roster import ────────────────────────────────────────────────────────
+// Always previews before writing: an import creates hundreds of records at once,
+// and "undo" means deleting them by hand. The preview calls the same endpoint
+// with dry_run, so what it reports is what the import will do.
+function ImportCsvModal({ onClose, onImported }) {
+  const [file, setFile] = useState(null)
+  const [preview, setPreview] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const inputRef = useRef(null)
+
+  const submit = async (dryRun) => {
+    if (!file) return setError('Choose a CSV file first.')
+    const formData = new FormData()
+    formData.append('file', file)
+    if (dryRun) formData.append('dry_run', 'true')
+
+    try {
+      setBusy(true); setError('')
+      const res = await studentAPI.importStudentsCsv(formData)
+      if (dryRun) {
+        setPreview(res.data)
+      } else {
+        onImported(res.data)
+        onClose()
+      }
+    } catch (err) {
+      const data = err.response?.data
+      setError(data?.file || data?.detail || 'Import failed.')
+      setPreview(null)
+    } finally { setBusy(false) }
+  }
+
+  const chooseFile = (e) => {
+    setFile(e.target.files[0] || null)
+    setPreview(null)
+    setError('')
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-screen overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="p-5 border-b border-gray-200 flex items-start justify-between">
+          <div>
+            <h3 className="font-bold text-gray-900">Import Students from CSV</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Add a whole roster at once</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <p className="text-xs font-semibold text-gray-600 mb-1">Required header row</p>
+            <code className="text-xs text-gray-800 block">student_id,name,grade,section</code>
+            <p className="text-xs text-gray-500 mt-2">
+              An optional <code>is_active</code> column is accepted. Extra columns are
+              ignored, so a registry export can be used as-is.
+            </p>
+          </div>
+
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={chooseFile}
+            className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          />
+
+          {error && <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>}
+
+          {preview && (
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex gap-4 text-sm">
+                <span className="text-green-700 font-semibold">{preview.would_create} will be added</span>
+                {preview.skipped > 0 && (
+                  <span className="text-amber-700 font-semibold">{preview.skipped} skipped</span>
+                )}
+              </div>
+
+              {preview.preview?.length > 0 && (
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-50 text-gray-500">
+                    <tr>
+                      <th className="px-3 py-1.5 text-left">ID</th>
+                      <th className="px-3 py-1.5 text-left">Name</th>
+                      <th className="px-3 py-1.5 text-left">Grade</th>
+                      <th className="px-3 py-1.5 text-left">Section</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.preview.map((row) => (
+                      <tr key={row.row} className="border-t border-gray-100">
+                        <td className="px-3 py-1.5 font-medium text-gray-800">{row.student_id}</td>
+                        <td className="px-3 py-1.5 text-gray-600">{row.name}</td>
+                        <td className="px-3 py-1.5 text-gray-600">{row.grade}</td>
+                        <td className="px-3 py-1.5 text-gray-600">{row.section}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {preview.would_create > (preview.preview?.length ?? 0) && (
+                <p className="px-3 py-2 text-xs text-gray-400 border-t border-gray-100">
+                  …and {preview.would_create - preview.preview.length} more
+                </p>
+              )}
+
+              {preview.errors?.length > 0 && (
+                <div className="border-t border-gray-200 max-h-40 overflow-y-auto">
+                  <p className="px-3 pt-2 text-xs font-semibold text-amber-700">Rows that will be skipped</p>
+                  <ul className="px-3 pb-2 space-y-0.5">
+                    {preview.errors.map((e, i) => (
+                      <li key={i} className="text-xs text-amber-700">Row {e.row}: {e.error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="p-5 border-t border-gray-200 flex gap-3">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
+            Cancel
+          </button>
+          {!preview ? (
+            <button onClick={() => submit(true)} disabled={busy || !file}
+              className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 transition">
+              {busy ? 'Checking…' : 'Preview'}
+            </button>
+          ) : (
+            <button onClick={() => submit(false)} disabled={busy || preview.would_create === 0}
+              className="flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 disabled:opacity-40 transition">
+              {busy ? 'Importing…' : `Import ${preview.would_create}`}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
 const StudentManagement = () => {
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -149,6 +293,7 @@ const StudentManagement = () => {
   const [filterStatus, setFilterStatus] = useState('active')
 
   const [modalStudent, setModalStudent] = useState(undefined) // undefined=closed, null=new, object=edit
+  const [showImport, setShowImport] = useState(false)
 
   const fetchStudents = async () => {
     setLoading(true)
@@ -241,6 +386,13 @@ const StudentManagement = () => {
                     <option value="all">All</option>
                   </select>
                 </div>
+                {(user?.authorization_level ?? 0) >= 2 && (
+                  <button
+                    onClick={() => setShowImport(true)}
+                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition whitespace-nowrap">
+                    Import CSV
+                  </button>
+                )}
                 <button
                   onClick={() => setModalStudent(null)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition whitespace-nowrap">
@@ -335,6 +487,20 @@ const StudentManagement = () => {
           student={modalStudent}
           onClose={() => setModalStudent(undefined)}
           onSaved={() => { fetchStudents(); setSuccess(modalStudent ? 'Student updated.' : 'Student added successfully.') }}
+        />
+      )}
+
+      {showImport && (
+        <ImportCsvModal
+          onClose={() => setShowImport(false)}
+          onImported={(result) => {
+            fetchStudents()
+            setSuccess(
+              result.skipped
+                ? `Imported ${result.created} students. ${result.skipped} row(s) were skipped.`
+                : `Imported ${result.created} students.`
+            )
+          }}
         />
       )}
     </div>

@@ -224,6 +224,82 @@ class StudentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     @action(
         detail=False,
         methods=['post'],
+        url_path='import-csv',
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def import_csv(self, request):
+        """
+        POST /api/v1/students/import-csv/
+        Create students in bulk from a CSV roster.
+
+        Form fields:
+          file    (file)   — CSV with header: student_id,name,grade,section[,is_active]
+          dry_run (bool)   — validate and report without writing anything
+
+        Students are created in the caller's own tenant; the file cannot place
+        them elsewhere. Bad rows are reported individually and skipped rather
+        than failing the file, so a roster with three problems still imports the
+        rest. Requires authorisation level 2 — bulk-creating student records is
+        not a teacher-level action.
+        """
+        from django.db import transaction
+
+        from .importer import ImportError_, parse_students_csv
+
+        if getattr(request.user, 'authorization_level', 0) < 2:
+            return Response(
+                {'detail': 'Importing a roster requires authorisation level 2 or higher.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        upload = request.FILES.get('file')
+        if not upload:
+            return Response({'file': 'A CSV file is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        tenant_id = request_tenant_id(request)
+        existing = Student.objects.filter(tenant_id=tenant_id).values_list('student_id', flat=True)
+
+        try:
+            rows, errors = parse_students_csv(upload.read(), existing_student_ids=existing)
+        except ImportError_ as exc:
+            return Response({'file': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        dry_run = str(request.data.get('dry_run', '')).lower() in ('1', 'true', 'yes')
+
+        if dry_run:
+            return Response({
+                'dry_run': True,
+                'would_create': len(rows),
+                'skipped': len(errors),
+                'errors': errors,
+                'preview': rows[:10],
+            }, status=status.HTTP_200_OK)
+
+        # One transaction: a roster half-imported because row 400 failed is
+        # harder to reason about than one that either landed or did not.
+        with transaction.atomic():
+            created = Student.objects.bulk_create([
+                Student(
+                    tenant_id=tenant_id,
+                    student_id=row['student_id'],
+                    name=row['name'],
+                    grade=row['grade'],
+                    section=row['section'],
+                    is_active=row['is_active'],
+                )
+                for row in rows
+            ])
+
+        return Response({
+            'dry_run': False,
+            'created': len(created),
+            'skipped': len(errors),
+            'errors': errors,
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=['post'],
         url_path='identify',
         parser_classes=[MultiPartParser, FormParser],
     )

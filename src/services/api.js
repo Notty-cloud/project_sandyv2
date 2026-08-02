@@ -64,6 +64,9 @@ export const studentAPI = {
   identifyGroup: (formData) => axiosInstance.post('/students/identify-group/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  importStudentsCsv: (formData) => axiosInstance.post('/students/import-csv/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
 
 // Enrollment APIs
