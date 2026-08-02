@@ -5,6 +5,11 @@ import Alert from '../components/Alert'
 import { attendanceAPI, classAPI } from '../services/api'
 import { authService } from '../services/auth'
 
+// Matches FACE_MATCHING_THRESHOLD in config/settings.py and MATCH_THRESHOLD in
+// EnrollmentHub. Measured on this deployment: two photos of one person score
+// ~0.84, two different people ~0.48 — so 0.65 sits between them with margin.
+const RECOMMENDED_THRESHOLD = 0.65
+
 const AttendanceView = () => {
   const [selectedClass, setSelectedClass] = useState('')
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
@@ -19,7 +24,7 @@ const AttendanceView = () => {
   const [showFaceModal, setShowFaceModal] = useState(false)
   const [faceImage, setFaceImage] = useState(null)
   const [facePreview, setFacePreview] = useState(null)
-  const [faceThreshold, setFaceThreshold] = useState(0.65)
+  const [faceThreshold, setFaceThreshold] = useState(RECOMMENDED_THRESHOLD)
   const [faceLoading, setFaceLoading] = useState(false)
   const [faceResult, setFaceResult] = useState(null)
   const [sessionLog, setSessionLog] = useState([])
@@ -268,7 +273,7 @@ const AttendanceView = () => {
                         const statusStyle = getStatusBadge(record.status)
                         return (
                           <tr key={record.id} className="border-b hover:bg-gray-50">
-                            <td className="px-6 py-3 text-gray-900 font-medium">{record.student_id}</td>
+                            <td className="px-6 py-3 text-gray-900 font-medium">{record.student_code || '—'}</td>
                             <td className="px-6 py-3 text-gray-600">{record.student_name || 'N/A'}</td>
                             <td className="px-6 py-3">
                               <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusStyle.bg} ${statusStyle.text}`}>
@@ -353,10 +358,17 @@ const AttendanceView = () => {
                 )}
               </div>
 
-              {/* Threshold slider */}
+              {/* Threshold slider. The full range stays available — lowering it
+                  is how you probe where the model actually separates people.
+                  The warning below marks the band where measured impostor
+                  scores live (~0.48), so the risk is visible without the
+                  control being taken away. */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Similarity Threshold: <span className="font-bold text-blue-600">{faceThreshold.toFixed(2)}</span>
+                  Similarity Threshold:{' '}
+                  <span className={`font-bold ${faceThreshold < RECOMMENDED_THRESHOLD ? 'text-amber-600' : 'text-blue-600'}`}>
+                    {faceThreshold.toFixed(2)}
+                  </span>
                 </label>
                 <input
                   type="range"
@@ -365,12 +377,21 @@ const AttendanceView = () => {
                   step="0.01"
                   value={faceThreshold}
                   onChange={(e) => setFaceThreshold(parseFloat(e.target.value))}
-                  className="w-full accent-blue-600"
+                  className={`w-full ${faceThreshold < RECOMMENDED_THRESHOLD ? 'accent-amber-500' : 'accent-blue-600'}`}
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>0.30 (lenient)</span>
+                  <span>0.30</span>
+                  <span>{RECOMMENDED_THRESHOLD.toFixed(2)} recommended</span>
                   <span>0.99 (strict)</span>
                 </div>
+                {faceThreshold < RECOMMENDED_THRESHOLD && (
+                  <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    Testing mode — below {RECOMMENDED_THRESHOLD.toFixed(2)} a different
+                    person can be accepted as a match (measured impostor scores reach
+                    ~0.48). Records marked at this setting are not trustworthy
+                    attendance data.
+                  </p>
+                )}
               </div>
 
               {/* Result */}

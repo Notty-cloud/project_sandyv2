@@ -4,11 +4,15 @@ from .models import StudentAttendance
 
 class AttendanceSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.name', read_only=True)
+    # The school's own identifier (STU-001), not the FK. It cannot be called
+    # student_id: that name is already the foreign key's column on this model
+    # and would return the student's UUID instead.
+    student_code = serializers.CharField(source='student.student_id', read_only=True)
     class_name = serializers.CharField(source='class_ref.class_name', read_only=True)
 
     class Meta:
         model = StudentAttendance
-        fields = ['id', 'tenant_id', 'student', 'student_name', 'class_ref', 'class_name', 'date', 'checkin_time', 'status', 'confidence', 'is_manual_override', 'override_reason', 'overridden_by', 'location', 'created_at']
+        fields = ['id', 'tenant_id', 'student', 'student_name', 'student_code', 'class_ref', 'class_name', 'date', 'checkin_time', 'status', 'confidence', 'is_manual_override', 'override_reason', 'overridden_by', 'location', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 
