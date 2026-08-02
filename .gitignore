@@ -39,3 +39,12 @@ staticfiles/
 # Windows "- Copy" duplicates
 *" - Copy"*
 *" - Copy."*
+
+# Face-data backups (backup_face_data output).
+# These contain face embeddings — biometric data about real students, much of
+# it about minors. They must never enter version control: git history would
+# retain them after deletion, and a public repository would publish them.
+# Keep backups outside the working tree.
+backup*.json
+*-backup.json
+face-backup*.json

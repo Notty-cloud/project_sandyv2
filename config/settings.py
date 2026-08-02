@@ -146,7 +146,14 @@ PASSWORD_HASHERS = [
 
 # ─── INTERNATIONALISATION ─────────────────────────────────────────────────────
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Asia/Manila'
+
+# Attendance status is decided from *local* time: a check-in past
+# ATTENDANCE_CUTOFF_HOUR:MINUTE counts as late (see attendance/views.py). That
+# makes this setting part of the core feature, not a display preference — with
+# the wrong zone every arrival is misclassified. It was 'Asia/Manila', 12 hours
+# from Barbados, which marked every on-time student late.
+# Override per deployment for schools in another zone.
+TIME_ZONE = os.getenv('TIME_ZONE', 'America/Barbados')
 USE_I18N = True
 USE_TZ = True
 
