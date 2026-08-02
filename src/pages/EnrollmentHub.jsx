@@ -98,6 +98,9 @@ function EnrollmentModal({ student, onClose, onEnrolled }) {
   const [enrollPreview, setEnrollPreview] = useState(null)
   const [enrollLoading, setEnrollLoading] = useState(false)
   const [enrollError, setEnrollError] = useState('')
+  // Set when the server rejects the photo as the wrong person; drives the
+  // override affordance below.
+  const [enrollConflict, setEnrollConflict] = useState(null)
   const enrollFileRef = useRef(null)
   const [academicYear] = useState(() => {
     const y = new Date().getFullYear()
@@ -140,7 +143,7 @@ function EnrollmentModal({ student, onClose, onEnrolled }) {
   }
   const handleEnrollRetake = () => { setEnrollBlob(null); setEnrollPreview(null); enrollCam.start() }
 
-  const handleEnroll = async () => {
+  const handleEnroll = async ({ override = false } = {}) => {
     if (!enrollBlob) return setEnrollError('Please capture or select a photo first.')
     const enrolledById = userData?.id || userData?.admin_id
     if (!enrolledById) return setEnrollError('Session expired — please sign in again.')
@@ -150,9 +153,10 @@ function EnrollmentModal({ student, onClose, onEnrolled }) {
     formData.append('image', imageFile)
     formData.append('academic_year', academicYear)
     formData.append('enrolled_by', enrolledById)
+    if (override) formData.append('override', 'true')
 
     try {
-      setEnrollLoading(true); setEnrollError('')
+      setEnrollLoading(true); setEnrollError(''); setEnrollConflict(null)
       const res = await enrollmentAPI.uploadStudentImage(student.id, formData)
       setEnrollResult({ quality_score: res.data.quality_score, embedding_version: res.data.embedding_version, message: res.data.message })
       setPhase('enrolled')
@@ -160,6 +164,9 @@ function EnrollmentModal({ student, onClose, onEnrolled }) {
     } catch (err) {
       const d = err.response?.data
       setEnrollError(d?.image || d?.detail || d?.message || 'Enrollment failed.')
+      // 409 means the face was recognised as someone else — offer the override
+      // rather than leaving the coordinator stuck on a genuinely bad first photo.
+      setEnrollConflict(err.response?.status === 409 && d?.code !== 'override_forbidden' ? d : null)
     } finally { setEnrollLoading(false) }
   }
 
@@ -249,10 +256,26 @@ function EnrollmentModal({ student, onClose, onEnrolled }) {
               )}
 
               {enrollError && <p className="text-red-500 text-sm mb-3 bg-red-50 p-2 rounded-lg">{enrollError}</p>}
+              {enrollConflict && (userData?.authorization_level ?? 0) >= 2 && (
+                <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-amber-800 text-xs mb-2">
+                    Only override if you are certain this is the right student — a face
+                    enrolled under the wrong name will mark the wrong person present.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleEnroll({ override: true })}
+                    disabled={enrollLoading}
+                    className="w-full py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 disabled:opacity-40 transition"
+                  >
+                    Enrol anyway (override)
+                  </button>
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <button onClick={close} className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm hover:bg-gray-50 transition">Cancel</button>
-                <button onClick={handleEnroll} disabled={enrollLoading || !enrollBlob}
+                <button onClick={() => handleEnroll()} disabled={enrollLoading || !enrollBlob}
                   className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-xl font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition">
                   {enrollLoading ? <span className="flex items-center justify-center gap-2"><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>Processing…</span> : 'Enrol Student'}
                 </button>

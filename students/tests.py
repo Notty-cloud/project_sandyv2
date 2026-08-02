@@ -29,6 +29,123 @@ def _blend(a, b, weight):
 	return [v / magnitude for v in mixed]
 
 
+class EnrolmentIdentityCheckTests(TestCase):
+	"""
+	Enrolment must refuse a face that is not the student it is filed under.
+
+	Without this, any face could be attached to any record — a student could
+	enrol their own face under a classmate's name and have it mark that
+	classmate present every morning.
+
+	_check_enrolment_identity is called directly with a stub request; the view
+	around it is exercised by the fuller API tests.
+	"""
+
+	class _StubRequest:
+		def __init__(self, user, data=None):
+			self.user = user
+			self.data = data or {}
+
+	def setUp(self):
+		from .views import _check_enrolment_identity
+		self.check = _check_enrolment_identity
+
+		self.tenant_id = uuid.uuid4()
+		self.coordinator = Admin.objects.create(
+			tenant_id=self.tenant_id, admin_name='coord', email='coord@example.com',
+			password_hash='x', role='admin', authorization_level=2,
+		)
+		self.teacher = Admin.objects.create(
+			tenant_id=self.tenant_id, admin_name='teach', email='teach@example.com',
+			password_hash='x', role='teacher', authorization_level=1,
+		)
+		self.alice = Student.objects.create(
+			tenant_id=self.tenant_id, student_id='STU-A', name='Alice',
+			grade='10', section='A',
+		)
+		self.bob = Student.objects.create(
+			tenant_id=self.tenant_id, student_id='STU-B', name='Bob',
+			grade='10', section='A',
+		)
+
+		self.alice_face = _unit_vector(0)
+		self.bob_face = _unit_vector(1)
+
+	def _enrol(self, student, vector):
+		return StudentEmbedding.objects.create(
+			student=student, tenant_id=self.tenant_id, embedding=vector,
+			backend='deepface', version=1, is_active=True,
+		)
+
+	def _face(self, vector):
+		return {'embedding': vector, 'quality_score': 0.99, 'backend': 'deepface'}
+
+	def test_first_photo_for_a_student_is_accepted(self):
+		result = self.check(self._StubRequest(self.coordinator), self.alice, self._face(self.alice_face))
+		self.assertIsNone(result)
+
+	def test_same_face_may_add_another_photo(self):
+		self._enrol(self.alice, self.alice_face)
+		near_identical = _blend(self.alice_face, _unit_vector(9), 0.05)
+		result = self.check(self._StubRequest(self.coordinator), self.alice, self._face(near_identical))
+		self.assertIsNone(result)
+
+	def test_different_face_cannot_be_added_to_an_existing_student(self):
+		"""The reported bug: enrolling one's own face under someone else's record."""
+		self._enrol(self.alice, self.alice_face)
+		result = self.check(self._StubRequest(self.coordinator), self.alice, self._face(self.bob_face))
+		self.assertIsNotNone(result)
+		self.assertEqual(result['code'], 'identity_mismatch')
+
+	def test_face_already_enrolled_elsewhere_is_refused(self):
+		"""Filing an already-known face under a second name makes attendance ambiguous."""
+		self._enrol(self.bob, self.bob_face)
+		result = self.check(self._StubRequest(self.coordinator), self.alice, self._face(self.bob_face))
+		self.assertIsNotNone(result)
+		self.assertEqual(result['code'], 'duplicate_face')
+		self.assertEqual(result['conflicting_student']['student_id'], 'STU-B')
+
+	def test_unrelated_face_is_fine_as_a_first_photo(self):
+		self._enrol(self.bob, self.bob_face)
+		result = self.check(self._StubRequest(self.coordinator), self.alice, self._face(self.alice_face))
+		self.assertIsNone(result)
+
+	def test_override_lets_a_coordinator_through(self):
+		self._enrol(self.alice, self.alice_face)
+		request = self._StubRequest(self.coordinator, {'override': 'true'})
+		self.assertIsNone(self.check(request, self.alice, self._face(self.bob_face)))
+
+	def test_override_is_refused_below_level_two(self):
+		self._enrol(self.alice, self.alice_face)
+		request = self._StubRequest(self.teacher, {'override': 'true'})
+		result = self.check(request, self.alice, self._face(self.bob_face))
+		self.assertIsNotNone(result)
+		self.assertEqual(result['code'], 'override_forbidden')
+
+	def test_check_is_scoped_to_the_students_tenant(self):
+		"""Another school's enrolment must not block or influence this one."""
+		other_tenant = uuid.uuid4()
+		stranger = Student.objects.create(
+			tenant_id=other_tenant, student_id='STU-X', name='Stranger',
+			grade='10', section='A',
+		)
+		StudentEmbedding.objects.create(
+			student=stranger, tenant_id=other_tenant, embedding=self.alice_face,
+			backend='deepface', version=1, is_active=True,
+		)
+		result = self.check(self._StubRequest(self.coordinator), self.alice, self._face(self.alice_face))
+		self.assertIsNone(result)
+
+	def test_embeddings_from_another_backend_are_ignored(self):
+		"""ArcFace and Facenet512 vectors are not comparable — see backends.py."""
+		StudentEmbedding.objects.create(
+			student=self.alice, tenant_id=self.tenant_id, embedding=self.alice_face,
+			backend='onnx', version=1, is_active=True,
+		)
+		result = self.check(self._StubRequest(self.coordinator), self.alice, self._face(self.bob_face))
+		self.assertIsNone(result)
+
+
 class BestMatchTests(TestCase):
 	def setUp(self):
 		self.tenant_id = uuid.uuid4()

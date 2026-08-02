@@ -13,6 +13,83 @@ from .face import extract_all_embeddings
 from .matching import best_match
 
 
+def _check_enrolment_identity(request, student, face_data):
+    """
+    Refuse a photo that is not the student it is being filed under.
+
+    Two ways an enrolment goes wrong:
+
+      * the face does not match the photos already on this student — someone is
+        adding a different person to an existing record;
+      * the face matches a *different* student more strongly — the photo is
+        being filed under the wrong name.
+
+    Returns an error dict to send back, or None when the photo is acceptable.
+    Pass ``override=true`` to bypass; a genuinely poor first photo has to be
+    correctable. Overrides require authorisation level 2 (coordinator+).
+    """
+    from django.conf import settings
+
+    threshold = getattr(settings, 'FACE_MATCHING_THRESHOLD', 0.65)
+    embedding = face_data['embedding']
+    backend = face_data['backend']
+
+    override = str(request.data.get('override', '')).lower() in ('1', 'true', 'yes')
+    if override:
+        if getattr(request.user, 'authorization_level', 0) < 2:
+            return {
+                'image': 'Overriding the identity check requires authorisation level 2 or higher.',
+                'code': 'override_forbidden',
+            }
+        return None
+
+    tenant_scoped = StudentEmbedding.objects.filter(
+        tenant_id=student.tenant_id, is_active=True, backend=backend,
+    ).select_related('student')
+
+    # Does this face match the photos already held for this student?
+    own = tenant_scoped.filter(student=student)
+    if own.exists():
+        _, own_score = best_match(own, embedding)
+        if own_score < threshold:
+            return {
+                'image': (
+                    f'This face does not match the photos already enrolled for '
+                    f'{student.name} (similarity {own_score:.2f}, needs {threshold:.2f}). '
+                    f'Check you have the right student, or re-enrol with override if '
+                    f'the existing photos are wrong.'
+                ),
+                'code': 'identity_mismatch',
+                'confidence': round(own_score, 4),
+            }
+        return None
+
+    # First photo for this student: make sure it is not someone already enrolled
+    # elsewhere, which is how a face ends up filed under two names.
+    others = tenant_scoped.exclude(student=student)
+    if others.exists():
+        other_embedding, other_score = best_match(others, embedding)
+        if other_score >= threshold and other_embedding is not None:
+            return {
+                'image': (
+                    f'This face is already enrolled as '
+                    f'{other_embedding.student.name} ({other_embedding.student.student_id}) '
+                    f'(similarity {other_score:.2f}). Enrolling it for {student.name} too '
+                    f'would make attendance ambiguous. Use override if these really are '
+                    f'different people.'
+                ),
+                'code': 'duplicate_face',
+                'confidence': round(other_score, 4),
+                'conflicting_student': {
+                    'id': str(other_embedding.student.id),
+                    'name': other_embedding.student.name,
+                    'student_id': other_embedding.student.student_id,
+                },
+            }
+
+    return None
+
+
 class StudentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     permission_classes = [RoleLevelPermission]
     required_roles = ('teacher', 'admin')
@@ -78,6 +155,14 @@ class StudentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
                 {'image': 'Face detected but confidence too low. Use better lighting and face the camera directly.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # ── Identity check ────────────────────────────────────────────────
+        # A photo containing *a* face is not enough: without this, any face can
+        # be attached to any student, and someone could enrol their own face
+        # under a classmate's record and have it mark that classmate present.
+        identity_error = _check_enrolment_identity(request, student, face_data)
+        if identity_error:
+            return Response(identity_error, status=status.HTTP_409_CONFLICT)
 
         # ── Save embedding ────────────────────────────────────────────────
         from admins.models import Admin
