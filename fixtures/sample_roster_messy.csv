@@ -1,0 +1,10 @@
+Student ID,Name,Grade,Section,Guardian Phone,is_active
+STU-101, Ava Bynoe ,10,A,246-555-0101,yes
+STU-102,Caleb Drayton,10,A,246-555-0102,
+STU-103,,10,B,246-555-0103,yes
+STU-104,Elena Farley,,B,246-555-0104,yes
+STU-101,Duplicate Of Ava,10,A,246-555-0105,yes
+STU-105,Gavin Hinds,11,C,246-555-0106,no
+STU-106,Halima Jones,11,C,246-555-0107,maybe
+
+STU-107,Ivan Kellman,11,C,246-555-0108,1
