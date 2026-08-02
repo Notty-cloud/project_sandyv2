@@ -282,6 +282,10 @@ function ImportCsvModal({ onClose, onImported }) {
 
 
 const StudentManagement = () => {
+  // Needed for the level check on the Import CSV button. StudentModal reads
+  // this separately; the two components do not share scope.
+  const user = authService.getUserData()
+
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
